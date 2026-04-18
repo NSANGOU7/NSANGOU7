@@ -1,0 +1,171 @@
+{
+  "theme": "light",
+  "archetype": "4 (Swiss & High-Contrast)",
+  "design_philosophy": "A high-performance, function-first automotive parts e-commerce and auction platform. Inspired by the clarity of Swiss design and the urgency of live auctions, the UI focuses on legibility, technical precision, and high-contrast elements. The aesthetic relies on crisp typography, stark whites, deep charcoals, and sharp signal red accents to drive bidding actions.",
+  "typography": {
+    "heading_font": "Outfit",
+    "body_font": "Manrope",
+    "mono_font": "JetBrains Mono",
+    "scales": {
+      "h1": "text-4xl sm:text-5xl lg:text-6xl tracking-tight font-bold",
+      "h2": "text-2xl sm:text-3xl lg:text-4xl tracking-tight font-semibold",
+      "h3": "text-xl sm:text-2xl tracking-tight font-medium",
+      "h4": "text-lg sm:text-xl tracking-tight font-medium",
+      "body": "text-base leading-relaxed",
+      "small": "text-sm text-slate-600",
+      "overline": "text-xs font-bold uppercase tracking-[0.2em]"
+    }
+  },
+  "colors": {
+    "background": {
+      "primary": "#FFFFFF",
+      "secondary": "#F8F9FA",
+      "tertiary": "#F1F3F5",
+      "inverse": "#0A0F1C"
+    },
+    "text": {
+      "primary": "#0A0F1C",
+      "secondary": "#4B5563",
+      "tertiary": "#9CA3AF",
+      "inverse": "#FFFFFF"
+    },
+    "brand": {
+      "primary": "#0A0F1C",
+      "primary_hover": "#1F2937",
+      "accent": "#FF3333",
+      "accent_hover": "#E60000",
+      "highlight": "#0066CC"
+    },
+    "status": {
+      "live_auction": "#FF3333",
+      "success": "#10B981",
+      "warning": "#F59E0B",
+      "info": "#3B82F6"
+    }
+  },
+  "spacing_and_layout": {
+    "container_padding": "px-6 md:px-12 lg:px-24",
+    "section_spacing": "py-16 md:py-24",
+    "grid_gaps": "gap-6 md:gap-8",
+    "border_radius": "rounded-none",
+    "borders": "border border-slate-200"
+  },
+  "components": {
+    "header": {
+      "style": "bg-white border-b border-slate-200 sticky top-0 z-50",
+      "search_bar": "bg-slate-50 border border-slate-200 focus-within:border-slate-900 rounded-none px-4 py-2"
+    },
+    "category_nav": {
+      "style": "bg-[#0A0F1C] text-white py-3 px-6 md:px-12 lg:px-24 flex items-center gap-8 overflow-x-auto whitespace-nowrap text-sm font-medium",
+      "item_hover": "text-slate-300 transition-colors"
+    },
+    "hero_banner": {
+      "style": "relative w-full h-[60vh] min-h-[400px] flex items-center bg-black",
+      "overlay": "absolute inset-0 bg-gradient-to-r from-black/80 via-black/50 to-transparent z-10",
+      "content_style": "relative z-20 text-white max-w-2xl px-6 md:px-12 lg:px-24"
+    },
+    "product_card": {
+      "style": "group bg-white border border-slate-200 hover:border-slate-900 transition-colors duration-200 p-4 flex flex-col",
+      "image_container": "aspect-square w-full bg-slate-50 mb-4 overflow-hidden relative",
+      "title": "font-medium text-slate-900 line-clamp-2 mb-2",
+      "price": "text-xl font-bold text-slate-900 mb-1"
+    },
+    "auction_card": {
+      "style": "group bg-white border border-slate-200 p-4 flex flex-col relative overflow-hidden",
+      "live_badge": "absolute top-4 left-4 bg-[#FF3333] text-white text-xs font-bold px-2 py-1 uppercase tracking-wider flex items-center gap-2 z-10",
+      "timer": "flex items-center gap-2 text-[#FF3333] font-mono font-bold mt-2",
+      "current_bid": "text-2xl font-bold text-slate-900",
+      "bid_button": "mt-4 w-full bg-[#0A0F1C] hover:bg-[#1F2937] text-white py-3 font-semibold transition-colors"
+    },
+    "advanced_search": {
+      "style": "bg-slate-50 border border-slate-200 p-6 md:p-8 grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4"
+    },
+    "buttons": {
+      "primary": "bg-[#0A0F1C] text-white px-6 py-3 font-semibold hover:bg-[#1F2937] transition-colors rounded-none flex items-center justify-center gap-2",
+      "secondary": "bg-white text-[#0A0F1C] border border-[#0A0F1C] px-6 py-3 font-semibold hover:bg-slate-50 transition-colors rounded-none flex items-center justify-center gap-2",
+      "accent": "bg-[#FF3333] text-white px-6 py-3 font-semibold hover:bg-[#E60000] transition-colors rounded-none flex items-center justify-center gap-2"
+    }
+  },
+  "media": {
+    "hero_images": [
+      {
+        "url": "https://images.unsplash.com/photo-1711386689622-1cda23e10217?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA4Mzl8MHwxfHNlYXJjaHwxfHxjYXIlMjBnYXJhZ2UlMjBtZWNoYW5pY3N8ZW58MHx8fHwxNzc2NDg1MjMwfDA&ixlib=rb-4.1.0&q=85",
+        "description": "Mechanic working on car in garage - Use for main hero banner",
+        "category": "hero"
+      },
+      {
+        "url": "https://images.unsplash.com/photo-1664565239977-997eb1cdde86?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjAzOTB8MHwxfHNlYXJjaHwzfHxzcG9ydCUyMGNhciUyMHNwZWVkfGVufDB8fHx8MTc3NjQ4NTIzMHww&ixlib=rb-4.1.0&q=85",
+        "description": "Silver car driving - Use for promo banner",
+        "category": "promo"
+      }
+    ],
+    "category_images": [
+      {
+        "url": "https://images.unsplash.com/photo-1717068341307-454cd5d662a1?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1ODh8MHwxfHNlYXJjaHwzfHxjYXIlMjBlbmdpbmUlMjBwYXJ0cyUyMGlzb2xhdGVkfGVufDB8fHx8MTc3NjQ4NTIxN3ww&ixlib=rb-4.1.0&q=85",
+        "description": "Engine parts",
+        "category": "engine"
+      },
+      {
+        "url": "https://images.unsplash.com/photo-1763087978864-fe5b2778c9f7?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2Njl8MHwxfHNlYXJjaHwyfHxjYXIlMjBicmFrZSUyMGRpc2N8ZW58MHx8fHwxNzc2NDg1MjMwfDA&ixlib=rb-4.1.0&q=85",
+        "description": "Carbon ceramic brake caliper",
+        "category": "brakes"
+      },
+      {
+        "url": "https://images.unsplash.com/photo-1760836395716-7dd00b71311a?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1Mjh8MHwxfHNlYXJjaHwyfHxjYXIlMjBzdXNwZW5zaW9uJTIwcGFydHxlbnwwfHx8fDE3NzY0ODUyMzB8MA&ixlib=rb-4.1.0&q=85",
+        "description": "Red coilover suspension",
+        "category": "suspension"
+      }
+    ],
+    "product_images": [
+      {
+        "url": "https://images.pexels.com/photos/34277926/pexels-photo-34277926.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+        "description": "Detailed view of brake caliper and disc",
+        "category": "product_gallery_1"
+      },
+      {
+        "url": "https://images.unsplash.com/photo-1760317890283-540a468b86f6?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1Mjh8MHwxfHNlYXJjaHwxfHxjYXIlMjBzdXNwZW5zaW9uJTIwcGFydHxlbnwwfHx8fDE3NzY0ODUyMzB8MA&ixlib=rb-4.1.0&q=85",
+        "description": "Black air suspension bag",
+        "category": "product_gallery_2"
+      },
+      {
+        "url": "https://images.unsplash.com/photo-1717068341695-9d33ffb66968?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1ODh8MHwxfHNlYXJjaHwyfHxjYXIlMjBlbmdpbmUlMjBwYXJ0cyUyMGlzb2xhdGVkfGVufDB8fHx8MTc3NjQ4NTIxN3ww&ixlib=rb-4.1.0&q=85",
+        "description": "Engine compartment",
+        "category": "product_gallery_3"
+      }
+    ],
+    "logos": [
+      {
+        "url": "https://via.placeholder.com/150x50?text=AutoBid",
+        "description": "Main brand logo placeholder",
+        "category": "logo"
+      }
+    ]
+  },
+  "motion_and_interactions": {
+    "hover_states": "All cards and buttons must have distinct hover states. Use translate-y-[-2px] for cards, and background color shifts for buttons.",
+    "active_states": "Scale down slightly (scale-95) on active/click for buttons.",
+    "live_indicators": "Use a subtle pulsing animation (animate-pulse) on the red dot of live auction badges.",
+    "page_transitions": "Smooth fade-in for page loads.",
+    "image_gallery": "Use smooth zoom on hover for product gallery images."
+  },
+  "accessibility": {
+    "contrast": "Ensure all text meets minimum WCAG AA standards. Grey text must be at least slate-600 on white.",
+    "focus": "Use explicit focus rings: focus:ring-2 focus:ring-[#0A0F1C] focus:ring-offset-2",
+    "aria": "Include aria-labels for search inputs, cart icons, and bidding buttons.",
+    "testing": "All interactive elements MUST include data-testid attribute (e.g., data-testid='bid-button')."
+  },
+  "instructions_to_main_agent": [
+    "Build out a fully functional e-commerce frontend in React/Tailwind/Shadcn UI.",
+    "Create a persistent Header with a prominent search bar, cart icon with a badge, and user account link.",
+    "Below the Header, create a sticky Category Navigation bar with links: Engine, Brakes, Suspension, Electrical, Bodywork.",
+    "Build the Homepage: include a Hero Banner, a section for 'Live Auctions' with red timer badges, and grids for 'Featured Parts' and 'New Arrivals'.",
+    "Implement an Advanced Search component allowing filtering by brand, model, year, OEM reference, and condition.",
+    "Create a detailed Product Page featuring an image gallery (with thumbnails), technical description, vehicle compatibility table, and a dedicated section for bidding (showing current bid, input for new bid, and real-time countdown timer).",
+    "Implement a shopping cart slide-out or page, and a checkout flow UI.",
+    "Create a User Dashboard showing active bids, purchase history, and account settings.",
+    "Do NOT use pure border-radius on major containers (keep it sharp, rounded-none) to maintain the technical 'Swiss' look.",
+    "Use Phosphor Icons (@phosphor-icons/react) for sharp, technical icons.",
+    "Ensure the application strictly follows the light theme and high-contrast color palette provided.",
+    "Include 'data-testid' on all interactive elements as per accessibility guidelines."
+  ]
+}
