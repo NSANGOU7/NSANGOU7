@@ -6,6 +6,7 @@ import axios from 'axios';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { toast } from 'sonner';
+import ImageUploader from '../components/admin/ImageUploader';
 import {
   Select,
   SelectContent,
@@ -52,7 +53,7 @@ const emptyProduct = {
   condition: 'new',
   price: '',
   stock: '',
-  images: '',
+  images: [],
   is_auction: false
 };
 
@@ -111,7 +112,7 @@ const AdminProductsPage = () => {
       condition: product.condition || 'new',
       price: product.price?.toString() || '',
       stock: product.stock?.toString() || '',
-      images: (product.images || []).join('\n'),
+      images: product.images || [],
       is_auction: product.is_auction || false
     });
     setShowModal(true);
@@ -158,7 +159,7 @@ const AdminProductsPage = () => {
       condition: formData.condition,
       price: parseFloat(formData.price),
       stock: parseInt(formData.stock),
-      images: formData.images ? formData.images.split('\n').map(url => url.trim()).filter(Boolean) : [],
+      images: formData.images || [],
       is_auction: formData.is_auction
     };
 
@@ -560,16 +561,11 @@ const AdminProductsPage = () => {
 
             {/* Images */}
             <div>
-              <label className="block text-sm font-medium mb-1">URLs des images</label>
-              <textarea
-                name="images"
-                value={formData.images}
-                onChange={handleInputChange}
-                placeholder="https://example.com/image1.jpg&#10;https://example.com/image2.jpg&#10;(une URL par ligne)"
-                className="w-full p-3 border border-slate-200 focus:border-slate-900 outline-none min-h-[80px] font-mono text-sm"
-                data-testid="product-images"
+              <label className="block text-sm font-medium mb-2">Images du produit</label>
+              <ImageUploader
+                images={formData.images}
+                onChange={(newImages) => setFormData(prev => ({ ...prev, images: newImages }))}
               />
-              <p className="text-xs text-slate-500 mt-1">Une URL par ligne</p>
             </div>
 
             {/* Is Auction */}

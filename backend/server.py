@@ -4,7 +4,7 @@ from pathlib import Path
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
-from fastapi import FastAPI, APIRouter, HTTPException, Request, Depends, Response, Query, Body
+from fastapi import FastAPI, APIRouter, HTTPException, Request, Depends, Response, Query, Body, UploadFile, File, Header
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
 from bson import ObjectId
@@ -13,6 +13,9 @@ import logging
 import bcrypt
 import jwt
 import secrets
+import asyncio
+import requests
+import resend
 from datetime import datetime, timezone, timedelta
 from pydantic import BaseModel, Field, ConfigDict, EmailStr
 from typing import List, Optional, Dict, Any
@@ -34,11 +37,137 @@ db = client[os.environ['DB_NAME']]
 JWT_SECRET = os.environ.get('JWT_SECRET', secrets.token_hex(32))
 JWT_ALGORITHM = "HS256"
 
+# Resend Config
+resend.api_key = os.environ.get("RESEND_API_KEY", "")
+SENDER_EMAIL = os.environ.get("SENDER_EMAIL", "onboarding@resend.dev")
+ADMIN_NOTIFICATION_EMAIL = os.environ.get("ADMIN_NOTIFICATION_EMAIL", "admin@autoparts.com")
+
+# PayPal Config
+PAYPAL_ME_USERNAME = os.environ.get("PAYPAL_ME_USERNAME", "")
+
+# Object Storage Config
+STORAGE_URL = "https://integrations.emergentagent.com/objstore/api/v1/storage"
+EMERGENT_KEY = os.environ.get("EMERGENT_LLM_KEY", "")
+APP_NAME = "autoparts"
+storage_key = None
+
 # Create the main app
 app = FastAPI(title="AutoParts E-Commerce API")
 
 # Create a router with the /api prefix
 api_router = APIRouter(prefix="/api")
+
+# ========== OBJECT STORAGE ==========
+def init_storage():
+    global storage_key
+    if storage_key:
+        return storage_key
+    try:
+        resp = requests.post(f"{STORAGE_URL}/init", json={"emergent_key": EMERGENT_KEY}, timeout=30)
+        resp.raise_for_status()
+        storage_key = resp.json()["storage_key"]
+        logger.info("Object Storage initialized")
+        return storage_key
+    except Exception as e:
+        logger.error(f"Storage init failed: {e}")
+        return None
+
+def put_object(path: str, data: bytes, content_type: str) -> dict:
+    key = init_storage()
+    if not key:
+        raise HTTPException(status_code=500, detail="Storage not available")
+    resp = requests.put(
+        f"{STORAGE_URL}/objects/{path}",
+        headers={"X-Storage-Key": key, "Content-Type": content_type},
+        data=data, timeout=120
+    )
+    resp.raise_for_status()
+    return resp.json()
+
+def get_object(path: str):
+    key = init_storage()
+    if not key:
+        raise HTTPException(status_code=500, detail="Storage not available")
+    resp = requests.get(
+        f"{STORAGE_URL}/objects/{path}",
+        headers={"X-Storage-Key": key}, timeout=60
+    )
+    resp.raise_for_status()
+    return resp.content, resp.headers.get("Content-Type", "application/octet-stream")
+
+# ========== EMAIL (RESEND) ==========
+async def send_email(to_email: str, subject: str, html_content: str):
+    if not resend.api_key:
+        logger.warning("Resend API key not configured, skipping email")
+        return None
+    try:
+        params = {
+            "from": SENDER_EMAIL,
+            "to": [to_email],
+            "subject": subject,
+            "html": html_content
+        }
+        result = await asyncio.to_thread(resend.Emails.send, params)
+        logger.info(f"📧 Email sent to {to_email}: {result.get('id')}")
+        return result
+    except Exception as e:
+        logger.error(f"Email send failed: {e}")
+        return None
+
+def order_confirmation_email_html(order):
+    items_html = "".join([
+        f"<tr><td style='padding:8px;border-bottom:1px solid #eee'>{item['title']}</td>"
+        f"<td style='padding:8px;border-bottom:1px solid #eee;text-align:center'>{item['quantity']}</td>"
+        f"<td style='padding:8px;border-bottom:1px solid #eee;text-align:right'>{item['subtotal']:.2f} €</td></tr>"
+        for item in order.get("items", [])
+    ])
+    return f"""
+    <!DOCTYPE html>
+    <html><body style="font-family:Arial,sans-serif;max-width:600px;margin:auto;padding:20px">
+      <div style="background:#0A0F1C;color:white;padding:20px;text-align:center">
+        <h1 style="margin:0">AUTO<span style="color:#FF3333">PARTS</span></h1>
+      </div>
+      <div style="padding:20px;background:#fff">
+        <h2>Merci pour votre commande, {order['user_name']} !</h2>
+        <p>Votre commande a été confirmée et est en cours de traitement.</p>
+        <p><strong>Numéro de commande:</strong> #{order['id'][:8]}</p>
+        <p><strong>Numéro de suivi:</strong> <span style="color:#FF3333;font-weight:bold">{order.get('tracking_number', 'N/A')}</span></p>
+        <p>Suivez votre commande: <a href="https://auto-parts-shop-72.preview.emergentagent.com/suivi?number={order.get('tracking_number','')}">Cliquez ici</a></p>
+        <h3>Articles commandés</h3>
+        <table style="width:100%;border-collapse:collapse">
+          <thead><tr style="background:#f5f5f5"><th style="padding:8px;text-align:left">Article</th><th style="padding:8px">Qté</th><th style="padding:8px;text-align:right">Total</th></tr></thead>
+          <tbody>{items_html}</tbody>
+          <tfoot><tr><td colspan="2" style="padding:12px;font-weight:bold;text-align:right">TOTAL</td><td style="padding:12px;font-weight:bold;text-align:right;color:#FF3333;font-size:18px">{order['total']:.2f} €</td></tr></tfoot>
+        </table>
+        <p style="margin-top:30px;color:#666">Mode de livraison: <strong>{'Retrait en magasin' if order.get('shipping_method')=='pickup' else 'Livraison à domicile'}</strong></p>
+        <p style="color:#666">Mode de paiement: <strong>{order.get('payment_method','').upper()}</strong></p>
+      </div>
+      <div style="background:#f5f5f5;padding:20px;text-align:center;color:#666;font-size:12px">
+        <p>© 2026 AutoParts. Tous droits réservés.</p>
+      </div>
+    </body></html>
+    """
+
+def admin_notification_email_html(order):
+    return f"""
+    <!DOCTYPE html>
+    <html><body style="font-family:Arial,sans-serif;max-width:600px;margin:auto">
+      <div style="background:#FF3333;color:white;padding:20px;text-align:center">
+        <h1>🔔 Nouvelle commande !</h1>
+      </div>
+      <div style="padding:20px;background:#fff">
+        <h2>Commande #{order['id'][:8]}</h2>
+        <p><strong>Client:</strong> {order['user_name']} ({order['user_email']})</p>
+        <p><strong>Montant:</strong> <span style="color:#FF3333;font-size:24px;font-weight:bold">{order['total']:.2f} €</span></p>
+        <p><strong>Paiement:</strong> {order.get('payment_method','').upper()}</p>
+        <p><strong>Livraison:</strong> {'Retrait magasin' if order.get('shipping_method')=='pickup' else 'Livraison à domicile'}</p>
+        <p><strong>Tracking:</strong> {order.get('tracking_number', 'N/A')}</p>
+        <p><strong>Articles:</strong> {len(order.get('items', []))}</p>
+        <hr>
+        <p><a href="https://auto-parts-shop-72.preview.emergentagent.com/admin/orders" style="background:#0A0F1C;color:white;padding:12px 24px;text-decoration:none;display:inline-block">Voir dans l'admin</a></p>
+      </div>
+    </body></html>
+    """
 
 # ========== PASSWORD HASHING ==========
 def hash_password(password: str) -> str:
@@ -766,10 +895,31 @@ async def create_order(order_data: OrderCreate, user: dict = Depends(get_current
     # Clear cart
     await db.carts.delete_one({"user_id": user["_id"]})
     
-    # Notify admin (MOCKED - console log)
+    # Send emails
+    order_doc.pop("_id", None)
+    try:
+        # Confirmation email to customer
+        await send_email(
+            to_email=user["email"],
+            subject=f"Confirmation de commande #{order_doc['id'][:8]} - AutoParts",
+            html_content=order_confirmation_email_html(order_doc)
+        )
+        # Notification email to admin
+        await send_email(
+            to_email=ADMIN_NOTIFICATION_EMAIL,
+            subject=f"🔔 Nouvelle commande {order_doc['total']:.2f}€ - #{order_doc['id'][:8]}",
+            html_content=admin_notification_email_html(order_doc)
+        )
+    except Exception as e:
+        logger.error(f"Email sending failed (non-blocking): {e}")
+    
+    # Notify admin (log)
     logger.info(f"🔔 ADMIN NOTIFICATION: New order {order_doc['id']} from {user['email']} - Total: {total}€ - Method: {order_data.payment_method}")
     
-    order_doc.pop("_id", None)
+    # Generate PayPal.me URL if PayPal selected
+    if order_data.payment_method == "paypal" and PAYPAL_ME_USERNAME:
+        order_doc["paypal_url"] = f"https://www.paypal.me/{PAYPAL_ME_USERNAME}/{total:.2f}EUR"
+    
     return order_doc
 
 @api_router.put("/orders/{order_id}/status", dependencies=[Depends(require_admin)])
@@ -977,6 +1127,116 @@ async def answer_question(question_id: str, answer_data: AnswerCreate):
     if result.matched_count == 0:
         raise HTTPException(status_code=404, detail="Question not found")
     return {"message": "Answer posted"}
+
+# ========== FILE UPLOAD ==========
+@api_router.post("/upload/image", dependencies=[Depends(require_admin)])
+async def upload_image(file: UploadFile = File(...)):
+    """Upload an image file (admin only). Returns public URL."""
+    # Validate content type
+    if not file.content_type or not file.content_type.startswith("image/"):
+        raise HTTPException(status_code=400, detail="File must be an image")
+    
+    # Get extension
+    ext = "jpg"
+    if file.filename and "." in file.filename:
+        ext = file.filename.split(".")[-1].lower()
+    if ext not in ["jpg", "jpeg", "png", "gif", "webp"]:
+        raise HTTPException(status_code=400, detail="Unsupported image format")
+    
+    # Read file data
+    data = await file.read()
+    
+    # Check size (max 5MB)
+    if len(data) > 5 * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="File too large (max 5MB)")
+    
+    # Upload to Object Storage
+    file_id = str(uuid.uuid4())
+    path = f"{APP_NAME}/products/{file_id}.{ext}"
+    
+    try:
+        result = put_object(path, data, file.content_type)
+    except Exception as e:
+        logger.error(f"Upload failed: {e}")
+        raise HTTPException(status_code=500, detail="Upload failed")
+    
+    # Store reference in DB
+    await db.files.insert_one({
+        "id": file_id,
+        "storage_path": result["path"],
+        "original_filename": file.filename,
+        "content_type": file.content_type,
+        "size": result.get("size", len(data)),
+        "is_deleted": False,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    })
+    
+    # Return the URL that frontend can use
+    backend_url = os.environ.get("BACKEND_URL", "https://auto-parts-shop-72.preview.emergentagent.com")
+    file_url = f"{backend_url}/api/files/{file_id}"
+    
+    return {"url": file_url, "id": file_id, "path": result["path"]}
+
+@api_router.get("/files/{file_id}")
+async def download_file(file_id: str):
+    """Public endpoint to serve uploaded images."""
+    record = await db.files.find_one({"id": file_id, "is_deleted": False}, {"_id": 0})
+    if not record:
+        raise HTTPException(status_code=404, detail="File not found")
+    
+    try:
+        data, content_type = get_object(record["storage_path"])
+        return Response(
+            content=data, 
+            media_type=record.get("content_type", content_type),
+            headers={"Cache-Control": "public, max-age=86400"}
+        )
+    except Exception as e:
+        logger.error(f"File download failed: {e}")
+        raise HTTPException(status_code=500, detail="Failed to retrieve file")
+
+# ========== ADMIN AUCTIONS MANAGEMENT ==========
+@api_router.get("/admin/auctions", dependencies=[Depends(require_admin)])
+async def get_all_auctions_admin():
+    auctions = await db.auctions.find({}, {"_id": 0}).sort("created_at", -1).to_list(100)
+    for auction in auctions:
+        product = await db.products.find_one({"id": auction["product_id"]}, {"_id": 0})
+        if product:
+            auction["product"] = product
+    return auctions
+
+@api_router.post("/admin/auctions/{auction_id}/close", dependencies=[Depends(require_admin)])
+async def close_auction(auction_id: str):
+    auction = await db.auctions.find_one({"id": auction_id})
+    if not auction:
+        raise HTTPException(status_code=404, detail="Auction not found")
+    
+    await db.auctions.update_one(
+        {"id": auction_id},
+        {"$set": {"status": "closed", "end_time": datetime.now(timezone.utc).isoformat()}}
+    )
+    
+    # Unmark product as auction
+    await db.products.update_one(
+        {"id": auction["product_id"]},
+        {"$set": {"is_auction": False}}
+    )
+    
+    return {"message": "Auction closed"}
+
+@api_router.delete("/admin/auctions/{auction_id}", dependencies=[Depends(require_admin)])
+async def delete_auction(auction_id: str):
+    auction = await db.auctions.find_one({"id": auction_id})
+    if not auction:
+        raise HTTPException(status_code=404, detail="Auction not found")
+    
+    await db.auctions.delete_one({"id": auction_id})
+    await db.products.update_one(
+        {"id": auction["product_id"]},
+        {"$set": {"is_auction": False}}
+    )
+    
+    return {"message": "Auction deleted"}
 
 # ========== ADMIN STATS ==========
 @api_router.get("/admin/stats", dependencies=[Depends(require_admin)])
@@ -1390,6 +1650,18 @@ async def startup_event():
     await db.orders.create_index("user_id")
     await db.auctions.create_index("product_id")
     await db.login_attempts.create_index("identifier")
+    
+    # Initialize Object Storage
+    try:
+        init_storage()
+    except Exception as e:
+        logger.error(f"Storage init failed at startup: {e}")
+    
+    # Delete old admin if exists (migration)
+    old_admin = await db.users.find_one({"email": "admin@autoparts.com"})
+    if old_admin:
+        await db.users.delete_one({"email": "admin@autoparts.com"})
+        logger.info("Old admin (admin@autoparts.com) removed")
     
     # Seed data
     await seed_admin()

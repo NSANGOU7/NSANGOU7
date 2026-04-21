@@ -136,11 +136,18 @@ const CheckoutPage = () => {
         );
         window.location.href = checkoutResponse.data.url;
       } else if (paymentMethod === 'paypal') {
-        // PayPal MOCKED - redirect directly to success with mock
-        toast.info('PayPal (MOCKED) - Simulation de paiement');
-        setTimeout(() => {
-          navigate(`/checkout/success?session_id=mock_paypal_${order.id}`);
-        }, 1500);
+        // PayPal.me redirect - open in new tab
+        if (order.paypal_url) {
+          toast.info('Redirection vers PayPal...');
+          window.open(order.paypal_url, '_blank');
+          // Redirect user to a pending page
+          setTimeout(() => {
+            navigate(`/account/orders`);
+            toast.success('Commande créée ! Finalisez votre paiement PayPal dans l\'onglet ouvert.');
+          }, 1500);
+        } else {
+          toast.error('PayPal indisponible');
+        }
       } else if (paymentMethod === 'bank_transfer') {
         toast.success('Commande créée. Instructions de virement envoyées par email.');
         await fetchCart();
@@ -447,7 +454,6 @@ const CheckoutPage = () => {
                     </div>
                     <div className="flex items-center gap-2">
                       <span className="font-bold text-blue-700 text-lg italic">PayPal</span>
-                      <span className="px-2 py-0.5 bg-amber-100 text-amber-700 text-xs font-bold rounded">DEMO</span>
                     </div>
                   </label>
 

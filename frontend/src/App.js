@@ -30,6 +30,7 @@ import AdminPage from "./pages/AdminPage";
 import AdminProductsPage from "./pages/AdminProductsPage";
 import AdminOrdersPage from "./pages/AdminOrdersPage";
 import AdminChatPage from "./pages/AdminChatPage";
+import AdminAuctionsPage from "./pages/AdminAuctionsPage";
 import TrackingPage from "./pages/TrackingPage";
 import ChatWidget from "./components/chat/ChatWidget";
 import { AboutPage, ContactPage, CGVPage, ReturnsPage } from "./pages/StaticPages";
@@ -253,6 +254,14 @@ function AppRoutes() {
         element={
           <ProtectedRoute requireAdmin>
             <AdminChatPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/auctions"
+        element={
+          <ProtectedRoute requireAdmin>
+            <AdminAuctionsPage />
           </ProtectedRoute>
         }
       />
