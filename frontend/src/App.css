@@ -1,34 +1,222 @@
-.App-logo {
-    height: 40vmin;
-    pointer-events: none;
+/* App-specific styles */
+
+/* Header styles */
+.header-shadow {
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 
-@media (prefers-reduced-motion: no-preference) {
-    .App-logo {
-        animation: App-logo-spin infinite 20s linear;
-    }
+/* Category navigation */
+.category-item {
+  position: relative;
+  padding: 0.5rem 0;
+  transition: color 0.2s ease;
 }
 
-.App-header {
-    background-color: #0f0f10;
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    font-size: calc(10px + 2vmin);
-    color: white;
+.category-item::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 0;
+  height: 2px;
+  background-color: #FF3333;
+  transition: width 0.2s ease;
 }
 
-.App-link {
-    color: #61dafb;
+.category-item:hover::after,
+.category-item.active::after {
+  width: 100%;
 }
 
-@keyframes App-logo-spin {
-    from {
-        transform: rotate(0deg);
-    }
-    to {
-        transform: rotate(360deg);
-    }
+/* Product card */
+.product-card {
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.product-card:hover {
+  border-color: var(--brand-primary);
+}
+
+/* Auction timer */
+.auction-timer {
+  font-family: 'JetBrains Mono', monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Price tag */
+.price-tag {
+  font-family: 'Outfit', sans-serif;
+  font-weight: 700;
+}
+
+/* Search input */
+.search-input:focus-within {
+  border-color: var(--brand-primary);
+  box-shadow: 0 0 0 2px rgba(10, 15, 28, 0.1);
+}
+
+/* Cart badge */
+.cart-badge {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  min-width: 20px;
+  height: 20px;
+  background-color: var(--brand-accent);
+  color: white;
+  font-size: 0.75rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+}
+
+/* Hero gradient */
+.hero-gradient {
+  background: linear-gradient(to right, rgba(0, 0, 0, 0.85), rgba(0, 0, 0, 0.5), transparent);
+}
+
+/* Section titles */
+.section-title {
+  font-family: 'Outfit', sans-serif;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+/* Condition badges */
+.condition-new {
+  background-color: #10B981;
+  color: white;
+}
+
+.condition-used {
+  background-color: #F59E0B;
+  color: white;
+}
+
+.condition-refurbished {
+  background-color: #3B82F6;
+  color: white;
+}
+
+/* Stock indicator */
+.stock-low {
+  color: #F59E0B;
+}
+
+.stock-out {
+  color: #EF4444;
+}
+
+.stock-available {
+  color: #10B981;
+}
+
+/* Form styles */
+.form-input {
+  background-color: var(--bg-secondary);
+  border: 1px solid #E5E7EB;
+  padding: 0.75rem 1rem;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.form-input:focus {
+  border-color: var(--brand-primary);
+  box-shadow: 0 0 0 2px rgba(10, 15, 28, 0.1);
+  outline: none;
+}
+
+/* Tab styles */
+.tab-item {
+  position: relative;
+  padding-bottom: 0.75rem;
+}
+
+.tab-item.active {
+  font-weight: 600;
+}
+
+.tab-item.active::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background-color: var(--brand-primary);
+}
+
+/* Order status badges */
+.status-pending {
+  background-color: #FEF3C7;
+  color: #92400E;
+}
+
+.status-confirmed {
+  background-color: #DBEAFE;
+  color: #1E40AF;
+}
+
+.status-shipped {
+  background-color: #E0E7FF;
+  color: #3730A3;
+}
+
+.status-delivered {
+  background-color: #D1FAE5;
+  color: #065F46;
+}
+
+/* Admin dashboard */
+.stat-card {
+  background: white;
+  border: 1px solid #E5E7EB;
+  padding: 1.5rem;
+}
+
+.stat-value {
+  font-family: 'Outfit', sans-serif;
+  font-size: 2rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.stat-label {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  margin-top: 0.5rem;
+}
+
+/* Skeleton loading */
+.skeleton {
+  background: linear-gradient(90deg, #F1F3F5 25%, #E5E7EB 50%, #F1F3F5 75%);
+  background-size: 200% 100%;
+  animation: skeleton-loading 1.5s infinite;
+}
+
+@keyframes skeleton-loading {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* Mobile menu */
+.mobile-menu-overlay {
+  background-color: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+}
+
+/* Bid history */
+.bid-item {
+  border-left: 2px solid transparent;
+  padding-left: 1rem;
+  transition: border-color 0.2s ease;
+}
+
+.bid-item.winning {
+  border-color: var(--status-success);
+}
+
+.bid-item.outbid {
+  border-color: var(--text-tertiary);
 }
