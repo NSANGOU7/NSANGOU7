@@ -136,18 +136,10 @@ const CheckoutPage = () => {
         );
         window.location.href = checkoutResponse.data.url;
       } else if (paymentMethod === 'paypal') {
-        // PayPal.me redirect - open in new tab
-        if (order.paypal_url) {
-          toast.info('Redirection vers PayPal...');
-          window.open(order.paypal_url, '_blank');
-          // Redirect user to a pending page
-          setTimeout(() => {
-            navigate(`/account/orders`);
-            toast.success('Commande créée ! Finalisez votre paiement PayPal dans l\'onglet ouvert.');
-          }, 1500);
-        } else {
-          toast.error('PayPal indisponible');
-        }
+        // Redirect to PayPal instructions page with paypal_url
+        toast.success('Commande créée !');
+        const url = encodeURIComponent(order.paypal_url || '');
+        navigate(`/paypal/${order.id}?paypal_url=${url}`);
       } else if (paymentMethod === 'bank_transfer') {
         toast.success('Commande créée. Instructions de virement envoyées par email.');
         await fetchCart();

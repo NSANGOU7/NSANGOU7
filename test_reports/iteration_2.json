@@ -1,0 +1,37 @@
+{
+  "summary": "Iteration 2: Tested all new AutoParts features - Resend emails, Object Storage uploads, PayPal redirect, admin auctions management, new admin email migration. 30/31 backend tests pass (1 skipped due to no cheap product). All critical frontend flows verified.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "POST /api/orders (email side-effect)", "issue": "Resend in test mode (using onboarding@resend.dev sender) only allows sending to the verified admin email (billionsmahmoud@gmail.com). Customer confirmation emails to non-admin recipients FAIL with: 'You can only send testing emails to your own email address... please verify a domain at resend.com/domains'. Error is logged but non-blocking. Admin notification email sends OK because it goes to billionsmahmoud@gmail.com. To send confirmation emails to real customers, a verified domain must be configured in Resend and SENDER_EMAIL updated."},
+      {"endpoint": "GET /api/", "issue": "Returns 404 via ingress (root /api/ not routed). Non-blocking."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "ChatWidget", "issues": ["Chat widget is correctly hidden when user is logged in as admin (uses data-testid='chat-widget-open' on public/customer pages). Verified visible on logged-out home page."]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/backend_test.py", "/app/test_reports/pytest/pytest_results.xml"],
+  "action_items": [
+    "Configure verified Resend domain to allow customer confirmation emails (currently only admin notification works because of Resend test-mode restriction). Update SENDER_EMAIL in /app/backend/.env once domain verified.",
+    "Optional: expose GET /api/ root endpoint."
+  ],
+  "critical_code_review_comments": [
+    "server.py is now 1707 lines - urgently split into modules (auth, products, orders, files, auctions, chat, admin) for maintainability.",
+    "/app/backend/server.py:1175 hardcodes BACKEND_URL fallback 'https://auto-parts-shop-72.preview.emergentagent.com' inside upload_image. Use env var only without default to avoid stale URLs in production.",
+    "CORS_ORIGINS='*' with allow_credentials=True is invalid per CORS spec - browsers may reject credentialed requests. Set explicit origins.",
+    "Order paypal_url is added to response object AFTER the order doc was inserted into DB - it's only returned in the API response, not persisted. If user navigates back to /paypal/:orderId after refresh, the page will need to reconstruct the URL from order.total + payment_method (PayPalInstructionsPage must do this independently). Confirmed working: page builds paypal.me/billions44/AMOUNTEUR client-side from order.total.",
+    "Resend send_email in /app/backend/server.py is async but uses the sync resend SDK - ensure not blocking the event loop on slow Resend responses. Consider running in run_in_executor or use httpx async."
+  ],
+  "updated_files": ["/app/backend/tests/backend_test.py"],
+  "success_rate": {"backend": "97% (30/31 pass, 1 skipped)", "frontend": "100% (admin login, /admin/auctions, /admin/products ImageUploader, /paypal/:orderId, chat widget all verified)"},
+  "test_credentials": "billionsmahmoud@gmail.com / admin123 (verified working). Old admin@autoparts.com confirmed deleted at startup (returns 401 on login attempt).",
+  "seed_data_creation": "Test PayPal order created (id: 24e58073..., 899€). 1 TEST product + 1 TEST auction created and deleted as part of TestAdminAuctions flow. Several test customer accounts (TEST_*@test.com) and test orders persisted in DB.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Backend pytest at /app/backend/tests/backend_test.py covers 31 tests across: chat, tracking/pickup discount, admin product CRUD, NEW admin email migration (old admin removed), file upload (admin-only, image-validation, upload+serve roundtrip with Object Storage), PayPal order URL generation (paypal.me/billions44/AMOUNTEUR), admin auctions (list/create/close/delete, auth required). Frontend verified via Playwright: login as billionsmahmoud@gmail.com works, /admin/auctions shows existing auction (Turbo Garrett GTX3582R) with Clôturer + delete buttons + 'Créer une enchère' modal opens with product/price/duration fields, /admin/products has ImageUploader with 'Cliquez pour parcourir vos fichiers' (input[type=file] accept='image/*'), /paypal/:orderId renders 4 numbered steps, paypal.me link, copy buttons (for URL and for #order_id), tracking number, total amount. Chat widget data-testid='chat-widget-open' present on logged-out pages, hidden for admin.",
+  "rca of the issue": "Resend customer email failure RCA: The Resend account is in 'test mode' using the default 'onboarding@resend.dev' sender. Resend's free/test tier only permits sending to the verified account email (billionsmahmoud@gmail.com). When customer.email != billionsmahmoud@gmail.com, Resend rejects with 403/422. This explains why admin notifications succeed but customer confirmations fail. Fix: verify a domain in resend.com/domains, then update SENDER_EMAIL='noreply@your-verified-domain.com' in /app/backend/.env and restart backend. The send_email function already wraps errors in try/except so this is non-blocking for order creation."
+}

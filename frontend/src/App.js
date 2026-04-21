@@ -31,6 +31,7 @@ import AdminProductsPage from "./pages/AdminProductsPage";
 import AdminOrdersPage from "./pages/AdminOrdersPage";
 import AdminChatPage from "./pages/AdminChatPage";
 import AdminAuctionsPage from "./pages/AdminAuctionsPage";
+import PayPalInstructionsPage from "./pages/PayPalInstructionsPage";
 import TrackingPage from "./pages/TrackingPage";
 import ChatWidget from "./components/chat/ChatWidget";
 import { AboutPage, ContactPage, CGVPage, ReturnsPage } from "./pages/StaticPages";
@@ -179,6 +180,16 @@ function AppRoutes() {
           <MainLayout>
             <CartPage />
           </MainLayout>
+        }
+      />
+      <Route
+        path="/paypal/:orderId"
+        element={
+          <ProtectedRoute>
+            <MainLayout>
+              <PayPalInstructionsPage />
+            </MainLayout>
+          </ProtectedRoute>
         }
       />
 

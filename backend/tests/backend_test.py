@@ -7,7 +7,7 @@ import requests
 BASE_URL = os.environ.get("REACT_APP_BACKEND_URL", "https://auto-parts-shop-72.preview.emergentagent.com").rstrip("/")
 API = f"{BASE_URL}/api"
 
-ADMIN_EMAIL = "admin@autoparts.com"
+ADMIN_EMAIL = "billionsmahmoud@gmail.com"
 ADMIN_PASSWORD = "admin123"
 
 
@@ -32,11 +32,13 @@ def customer_session():
 
 @pytest.fixture(scope="session")
 def seeded_product_id():
-    r = requests.get(f"{API}/products?limit=1", timeout=15)
+    r = requests.get(f"{API}/products?limit=50", timeout=15)
     assert r.status_code == 200
     data = r.json()
     assert data["products"], "No products seeded"
-    return data["products"][0]["id"]
+    in_stock = [p for p in data["products"] if p.get("stock", 0) >= 5]
+    assert in_stock, "No product with stock >= 5"
+    return in_stock[0]["id"]
 
 
 # ========== Health ==========
@@ -253,3 +255,164 @@ class TestAdminProducts:
             "price": 1, "stock": 1,
         }, timeout=15)
         assert r.status_code == 403
+
+
+
+# ========== NEW ADMIN EMAIL MIGRATION ==========
+class TestAdminMigration:
+    def test_old_admin_removed(self):
+        """Old admin@autoparts.com should be deleted at startup."""
+        r = requests.post(f"{API}/auth/login",
+                          json={"email": "admin@autoparts.com", "password": "admin123"}, timeout=15)
+        assert r.status_code == 401, f"Old admin still exists! status={r.status_code}"
+
+    def test_new_admin_login(self):
+        r = requests.post(f"{API}/auth/login",
+                          json={"email": ADMIN_EMAIL, "password": ADMIN_PASSWORD}, timeout=15)
+        assert r.status_code == 200, r.text
+        data = r.json()
+        assert data.get("user", {}).get("role") == "admin" or data.get("role") == "admin" \
+            or "token" in data or "access_token" in data
+
+
+# ========== FILE UPLOAD ==========
+class TestFileUpload:
+    def test_upload_requires_admin(self, customer_session):
+        files = {"file": ("test.png", b"fake-img-data", "image/png")}
+        r = customer_session.post(f"{API}/upload/image", files=files, timeout=20)
+        assert r.status_code == 403
+
+    def test_upload_unauthenticated(self):
+        files = {"file": ("test.png", b"fake-img-data", "image/png")}
+        r = requests.post(f"{API}/upload/image", files=files, timeout=20)
+        assert r.status_code == 401
+
+    def test_upload_rejects_non_image(self, admin_session):
+        files = {"file": ("test.txt", b"hello world", "text/plain")}
+        r = admin_session.post(f"{API}/upload/image", files=files, timeout=20)
+        assert r.status_code == 400
+
+    def test_upload_image_and_serve(self, admin_session):
+        # 1x1 PNG bytes
+        png = (
+            b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR"
+            b"\x00\x00\x00\x01\x00\x00\x00\x01\x08\x06\x00\x00\x00\x1f\x15\xc4"
+            b"\x89\x00\x00\x00\rIDATx\x9cc\x00\x01\x00\x00\x05\x00\x01"
+            b"\r\n-\xb4\x00\x00\x00\x00IEND\xaeB`\x82"
+        )
+        files = {"file": ("test_upload.png", png, "image/png")}
+        r = admin_session.post(f"{API}/upload/image", files=files, timeout=30)
+        assert r.status_code == 200, r.text
+        data = r.json()
+        assert "url" in data and "id" in data
+        assert "/api/files/" in data["url"]
+        TestFileUpload.file_id = data["id"]
+        TestFileUpload.file_url = data["url"]
+
+        # Fetch the file via public URL
+        r2 = requests.get(data["url"], timeout=20)
+        assert r2.status_code == 200, f"GET file failed: {r2.status_code}"
+        assert r2.headers.get("content-type", "").startswith("image/")
+        assert len(r2.content) > 0
+
+    def test_get_file_not_found(self):
+        r = requests.get(f"{API}/files/nonexistent-id-xyz", timeout=15)
+        assert r.status_code == 404
+
+
+# ========== PAYPAL ORDER ==========
+class TestPayPalOrder:
+    def test_order_with_paypal_returns_url(self, customer_session, seeded_product_id):
+        # Add to cart
+        customer_session.post(f"{API}/cart/add",
+                              json={"product_id": seeded_product_id, "quantity": 1}, timeout=15)
+        order_payload = {
+            "shipping_address": {
+                "street": "5 Rue PayPal",
+                "city": "Paris",
+                "postal_code": "75000",
+                "country": "France",
+                "phone": "0600000000",
+            },
+            "payment_method": "paypal",
+            "shipping_method": "delivery",
+            "save_card": False,
+        }
+        r = customer_session.post(f"{API}/orders", json=order_payload, timeout=20)
+        assert r.status_code == 200, r.text
+        order = r.json()
+        assert "paypal_url" in order, f"paypal_url missing in response: {order}"
+        assert "paypal.me/billions44/" in order["paypal_url"]
+        # Format: https://www.paypal.me/billions44/AMOUNTEUR
+        assert order["paypal_url"].endswith("EUR")
+        # Verify amount matches order total
+        amount_str = order["paypal_url"].split("/")[-1].replace("EUR", "")
+        assert abs(float(amount_str) - order["total"]) < 0.01
+
+
+# ========== ADMIN AUCTIONS MANAGEMENT ==========
+class TestAdminAuctions:
+    def test_list_auctions_requires_auth(self):
+        r = requests.get(f"{API}/admin/auctions", timeout=15)
+        assert r.status_code == 401
+
+    def test_list_auctions_forbidden_for_customer(self, customer_session):
+        r = customer_session.get(f"{API}/admin/auctions", timeout=15)
+        assert r.status_code == 403
+
+    def test_admin_list_auctions(self, admin_session):
+        r = admin_session.get(f"{API}/admin/auctions", timeout=15)
+        assert r.status_code == 200, r.text
+        data = r.json()
+        assert isinstance(data, list)
+
+    def test_create_close_delete_auction_flow(self, admin_session):
+        # Create a TEST product first
+        prod_payload = {
+            "title": "TEST Auction Product",
+            "description": "TEST",
+            "category": "engine",
+            "condition": "new",
+            "price": 100.0,
+            "stock": 1,
+            "images": [],
+        }
+        r = admin_session.post(f"{API}/products", json=prod_payload, timeout=15)
+        assert r.status_code == 200, r.text
+        pid = r.json()["id"]
+
+        # Create auction
+        from datetime import datetime, timezone, timedelta
+        auction_payload = {
+            "product_id": pid,
+            "starting_price": 50.0,
+            "end_time": (datetime.now(timezone.utc) + timedelta(days=7)).isoformat(),
+        }
+        r = admin_session.post(f"{API}/auctions", json=auction_payload, timeout=15)
+        assert r.status_code == 200, r.text
+        auction = r.json()
+        aid = auction["id"]
+
+        # List should contain it
+        r = admin_session.get(f"{API}/admin/auctions", timeout=15)
+        assert r.status_code == 200
+        assert any(a["id"] == aid for a in r.json())
+
+        # Close
+        r = admin_session.post(f"{API}/admin/auctions/{aid}/close", timeout=15)
+        assert r.status_code == 200, r.text
+
+        # Delete
+        r = admin_session.delete(f"{API}/admin/auctions/{aid}", timeout=15)
+        assert r.status_code == 200, r.text
+
+        # Cleanup product
+        admin_session.delete(f"{API}/products/{pid}", timeout=15)
+
+    def test_close_nonexistent_auction(self, admin_session):
+        r = admin_session.post(f"{API}/admin/auctions/nonexistent-id/close", timeout=15)
+        assert r.status_code == 404
+
+    def test_delete_nonexistent_auction(self, admin_session):
+        r = admin_session.delete(f"{API}/admin/auctions/nonexistent-id", timeout=15)
+        assert r.status_code == 404
