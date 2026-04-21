@@ -50,6 +50,7 @@ const ProductCard = ({ product, onAddToCart, onAddToWishlist }) => {
           <button
             onClick={(e) => {
               e.preventDefault();
+              e.stopPropagation();
               onAddToWishlist?.(id);
             }}
             className="p-2 bg-white border border-slate-200 hover:border-slate-900 transition-colors"
@@ -57,13 +58,6 @@ const ProductCard = ({ product, onAddToCart, onAddToWishlist }) => {
           >
             <Heart size={18} />
           </button>
-          <Link
-            to={`/products/${id}`}
-            className="p-2 bg-white border border-slate-200 hover:border-slate-900 transition-colors"
-            data-testid={`view-btn-${id}`}
-          >
-            <Eye size={18} />
-          </Link>
         </div>
       </Link>
 
