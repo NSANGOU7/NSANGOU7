@@ -205,11 +205,15 @@ const ProductDetailPage = () => {
         {/* Compatibility Alert */}
         <button
           onClick={() => setShowCompatModal(true)}
-          className="w-full bg-slate-900 rounded-2xl p-4 flex items-start gap-3 mb-4 hover:bg-slate-800 transition-colors text-left"
+          className="w-full bg-slate-900 rounded-2xl p-4 flex items-center gap-3 mb-4 hover:bg-slate-800 transition-colors text-left border border-slate-800"
           data-testid="compat-alert-btn"
         >
-          <Info size={20} className="text-blue-400 flex-shrink-0 mt-0.5" />
-          <p className="text-sm flex-1">Vérifier la description de l'objet pour confirmer sa compatibilité avec votre véhicule</p>
+          <Car size={20} className="text-blue-400 flex-shrink-0" />
+          <div className="flex-1">
+            <p className="text-sm font-semibold">Vérifier la compatibilité avec mon véhicule</p>
+            <p className="text-xs text-slate-400">Entrez votre plaque pour savoir si cette pièce correspond</p>
+          </div>
+          <ChevronRight size={18} className="text-slate-400" />
         </button>
 
         {/* "DANS X PANIERS" badge */}

@@ -1511,7 +1511,7 @@ async def respond_to_offer(offer_id: str, response: OfferResponse):
 
 # ========== BANK INFO ==========
 @api_router.get("/bank-info")
-async def get_bank_info():
+async def get_bank_info(user: dict = Depends(get_current_user)):
     return {
         "iban": os.environ.get("BANK_IBAN", ""),
         "bic": os.environ.get("BANK_BIC", ""),
