@@ -416,3 +416,122 @@ class TestAdminAuctions:
     def test_delete_nonexistent_auction(self, admin_session):
         r = admin_session.delete(f"{API}/admin/auctions/nonexistent-id", timeout=15)
         assert r.status_code == 404
+
+
+
+# ========== BANK INFO ==========
+class TestBankInfo:
+    def test_get_bank_info(self):
+        r = requests.get(f"{API}/bank-info", timeout=15)
+        assert r.status_code == 200, r.text
+        d = r.json()
+        assert d["iban"] == "FR7617238000010039398259386"
+        assert d["bic"] == "SCSYFRP2"
+        assert d["holder"] == "Mahmoud Nsangou"
+
+
+# ========== VIEW COUNTER ==========
+class TestViewCounter:
+    def test_increment_view(self, seeded_product_id):
+        # Get initial
+        r1 = requests.get(f"{API}/products/{seeded_product_id}", timeout=15)
+        assert r1.status_code == 200
+        before = r1.json().get("views", 0)
+        # Increment
+        r2 = requests.post(f"{API}/products/{seeded_product_id}/view", timeout=15)
+        assert r2.status_code == 200
+        assert r2.json().get("ok") is True
+        # GET increments views too; we just assert strictly greater than initial-1
+        r3 = requests.get(f"{API}/products/{seeded_product_id}", timeout=15)
+        after = r3.json().get("views", 0)
+        assert after > before
+
+
+# ========== OFFERS (Faire une offre) ==========
+class TestOffers:
+    def test_create_offer_requires_auth(self, seeded_product_id):
+        r = requests.post(f"{API}/offers",
+                          json={"product_id": seeded_product_id, "amount": 100.0}, timeout=15)
+        assert r.status_code == 401
+
+    def test_create_offer_and_my_offers(self, customer_session, seeded_product_id):
+        payload = {"product_id": seeded_product_id, "amount": 150.0, "message": "TEST offer message"}
+        r = customer_session.post(f"{API}/offers", json=payload, timeout=20)
+        assert r.status_code == 200, r.text
+        offer = r.json()
+        assert offer["status"] == "pending"
+        assert offer["amount"] == 150.0
+        assert offer["product_id"] == seeded_product_id
+        assert "id" in offer
+        assert offer["message"] == "TEST offer message"
+        TestOffers.offer_id = offer["id"]
+
+        # my offers
+        r2 = customer_session.get(f"{API}/offers/my", timeout=15)
+        assert r2.status_code == 200
+        offers = r2.json()
+        assert isinstance(offers, list)
+        assert any(o["id"] == TestOffers.offer_id for o in offers)
+
+    def test_create_offer_invalid_amount(self, customer_session, seeded_product_id):
+        r = customer_session.post(f"{API}/offers",
+                                  json={"product_id": seeded_product_id, "amount": 0}, timeout=15)
+        assert r.status_code == 400
+
+    def test_create_offer_product_not_found(self, customer_session):
+        r = customer_session.post(f"{API}/offers",
+                                  json={"product_id": "nonexistent-xyz", "amount": 50.0}, timeout=15)
+        assert r.status_code == 404
+
+    def test_admin_list_offers_requires_admin(self, customer_session):
+        r = customer_session.get(f"{API}/admin/offers", timeout=15)
+        assert r.status_code == 403
+
+    def test_admin_list_offers_unauthenticated(self):
+        r = requests.get(f"{API}/admin/offers", timeout=15)
+        assert r.status_code == 401
+
+    def test_admin_list_offers(self, admin_session):
+        r = admin_session.get(f"{API}/admin/offers", timeout=15)
+        assert r.status_code == 200, r.text
+        offers = r.json()
+        assert isinstance(offers, list)
+        assert any(o["id"] == TestOffers.offer_id for o in offers)
+
+    def test_admin_respond_invalid_status(self, admin_session):
+        r = admin_session.post(f"{API}/admin/offers/{TestOffers.offer_id}/respond",
+                               json={"status": "invalid_status"}, timeout=15)
+        assert r.status_code == 400
+
+    def test_admin_respond_not_found(self, admin_session):
+        r = admin_session.post(f"{API}/admin/offers/nonexistent-id/respond",
+                               json={"status": "accepted"}, timeout=15)
+        assert r.status_code == 404
+
+    def test_admin_respond_accepted(self, admin_session, customer_session):
+        r = admin_session.post(f"{API}/admin/offers/{TestOffers.offer_id}/respond",
+                               json={"status": "accepted", "admin_message": "OK, deal."}, timeout=20)
+        assert r.status_code == 200, r.text
+
+        # Verify persisted via customer's my offers
+        r2 = customer_session.get(f"{API}/offers/my", timeout=15)
+        assert r2.status_code == 200
+        matched = [o for o in r2.json() if o["id"] == TestOffers.offer_id]
+        assert matched, "Offer missing in /offers/my"
+        assert matched[0]["status"] == "accepted"
+        assert matched[0]["admin_message"] == "OK, deal."
+
+    def test_admin_respond_rejected_flow(self, admin_session, customer_session, seeded_product_id):
+        # Create a fresh offer
+        r = customer_session.post(f"{API}/offers",
+                                  json={"product_id": seeded_product_id, "amount": 25.0}, timeout=15)
+        assert r.status_code == 200
+        offer_id = r.json()["id"]
+
+        r = admin_session.post(f"{API}/admin/offers/{offer_id}/respond",
+                               json={"status": "rejected", "admin_message": "Too low"}, timeout=20)
+        assert r.status_code == 200
+
+        r2 = customer_session.get(f"{API}/offers/my", timeout=15)
+        matched = [o for o in r2.json() if o["id"] == offer_id]
+        assert matched and matched[0]["status"] == "rejected"

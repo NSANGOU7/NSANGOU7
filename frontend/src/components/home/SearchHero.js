@@ -1,44 +1,76 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, Car, Hash, Phone } from 'lucide-react';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../ui/select';
+
+const BRANDS = [
+  'BMW', 'Audi', 'Mercedes', 'Volkswagen', 'Peugeot', 'Renault', 'Citroën',
+  'Ford', 'Opel', 'Toyota', 'Honda', 'Nissan', 'Fiat', 'Seat', 'Skoda',
+  'Volvo', 'Jaguar', 'Land Rover', 'Porsche', 'Alfa Romeo', 'Mini', 'Dacia',
+  'Hyundai', 'Kia', 'Mazda', 'Suzuki', 'Subaru', 'Mitsubishi', 'Lexus',
+  'Jeep', 'Dodge', 'Tesla', 'Smart'
+];
+
+// Validate French license plate: AB-123-CD format (2 letters - 3 digits - 2 letters)
+const PLATE_REGEX = /^[A-Z]{2}-?\d{3}-?[A-Z]{2}$/;
 
 const SearchHero = () => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('plaque');
   const [searchValue, setSearchValue] = useState('');
+  const [selectedBrand, setSelectedBrand] = useState('');
+  const [plateError, setPlateError] = useState('');
 
   const tabs = [
     { id: 'plaque', label: 'Plaque', icon: Search, placeholder: 'AB-123-CD' },
-    { id: 'vehicule', label: 'Véhicule', icon: Car, placeholder: 'Marque, modèle, année...' },
+    { id: 'vehicule', label: 'Véhicule', icon: Car, placeholder: 'Sélectionnez une marque' },
     { id: 'reference', label: 'Référence', icon: Hash, placeholder: 'Référence OEM...' }
   ];
 
   const activeTabData = tabs.find(t => t.id === activeTab);
 
+  const validatePlate = (value) => {
+    const normalized = value.toUpperCase().replace(/\s/g, '');
+    if (!normalized) return true;
+    return PLATE_REGEX.test(normalized);
+  };
+
   const handleSearch = (e) => {
-    e.preventDefault();
-    if (!searchValue.trim()) return;
-    
-    if (activeTab === 'reference') {
-      navigate(`/products?oem=${encodeURIComponent(searchValue)}`);
+    e?.preventDefault();
+
+    if (activeTab === 'plaque') {
+      if (!searchValue.trim()) {
+        setPlateError('Veuillez entrer un numéro de plaque');
+        return;
+      }
+      if (!validatePlate(searchValue)) {
+        setPlateError('Format invalide. Utilisez XX-123-XX (ex: AB-123-CD)');
+        return;
+      }
+      setPlateError('');
+      navigate(`/products?plate=${encodeURIComponent(searchValue)}`);
     } else if (activeTab === 'vehicule') {
-      navigate(`/products?search=${encodeURIComponent(searchValue)}`);
+      if (!selectedBrand) {
+        setPlateError('Veuillez sélectionner une marque');
+        return;
+      }
+      setPlateError('');
+      navigate(`/products?brand=${encodeURIComponent(selectedBrand)}`);
     } else {
-      // Plaque - search by immatriculation
-      navigate(`/products?search=${encodeURIComponent(searchValue)}`);
+      if (!searchValue.trim()) return;
+      navigate(`/products?oem=${encodeURIComponent(searchValue)}`);
     }
   };
 
   return (
-    <section className="relative bg-gradient-to-br from-slate-50 via-white to-blue-50 py-12 md:py-16" data-testid="search-hero">
-      <div className="px-6 md:px-12 lg:px-24 max-w-6xl mx-auto">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl md:text-5xl font-bold tracking-tight text-slate-900 mb-3">
-            Trouvez votre pièce<br className="md:hidden" /> en quelques clics
-          </h1>
-          <p className="text-slate-600">Plus de 30 000 références en stock</p>
-        </div>
-
+    <section className="relative bg-gradient-to-br from-slate-50 via-white to-blue-50 py-8 md:py-12" data-testid="search-hero">
+      <div className="px-6 md:px-12 lg:px-24 max-w-4xl mx-auto">
         <div className="max-w-2xl mx-auto">
           {/* Tabs */}
           <div className="flex gap-2 mb-4" data-testid="search-tabs">
@@ -51,6 +83,8 @@ const SearchHero = () => {
                   onClick={() => {
                     setActiveTab(tab.id);
                     setSearchValue('');
+                    setSelectedBrand('');
+                    setPlateError('');
                   }}
                   className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-full font-medium text-sm transition-all ${
                     isActive
@@ -66,32 +100,40 @@ const SearchHero = () => {
             })}
           </div>
 
-          {/* Search Input */}
+          {/* Search Input/Select */}
           <form onSubmit={handleSearch} className="mb-6">
-            <div className="relative bg-white border-2 border-slate-200 rounded-full p-1.5 focus-within:border-[#3B5BFF] transition-colors">
-              <input
-                type="text"
-                value={searchValue}
-                onChange={(e) => setSearchValue(e.target.value.toUpperCase())}
-                placeholder={activeTabData.placeholder}
-                className="w-full px-6 py-3 bg-transparent outline-none text-lg text-center md:text-left font-medium"
-                data-testid="search-hero-input"
-              />
-            </div>
+            {activeTab === 'vehicule' ? (
+              <div className="bg-white border-2 border-slate-200 rounded-full p-1.5 focus-within:border-[#3B5BFF] transition-colors">
+                <Select value={selectedBrand} onValueChange={setSelectedBrand}>
+                  <SelectTrigger className="border-0 bg-transparent text-lg h-12 focus:ring-0" data-testid="brand-select">
+                    <SelectValue placeholder="Choisissez la marque de votre voiture" />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-[300px]">
+                    {BRANDS.map(brand => (
+                      <SelectItem key={brand} value={brand}>{brand}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            ) : (
+              <div className={`relative bg-white border-2 rounded-full p-1.5 transition-colors ${plateError ? 'border-red-400' : 'border-slate-200 focus-within:border-[#3B5BFF]'}`}>
+                <input
+                  type="text"
+                  value={searchValue}
+                  onChange={(e) => {
+                    setSearchValue(e.target.value.toUpperCase());
+                    setPlateError('');
+                  }}
+                  placeholder={activeTabData.placeholder}
+                  className="w-full px-6 py-3 bg-transparent outline-none text-lg text-center md:text-left font-medium"
+                  data-testid="search-hero-input"
+                />
+              </div>
+            )}
+            {plateError && (
+              <p className="text-sm text-red-600 mt-2 text-center" data-testid="plate-error">{plateError}</p>
+            )}
           </form>
-
-          {/* Car Image */}
-          <div className="relative my-6 rounded-3xl overflow-hidden bg-slate-100" data-testid="car-image">
-            <div className="aspect-[16/9] relative">
-              <img
-                src="https://images.unsplash.com/photo-1552519507-da3b142c6e3d?w=1200&h=675&fit=crop"
-                alt="Voiture vue arrière"
-                className="w-full h-full object-cover"
-              />
-              {/* Blurred plate overlay */}
-              <div className="absolute bottom-[20%] left-1/2 -translate-x-1/2 w-32 h-8 md:w-44 md:h-12 bg-[#3B5BFF] rounded backdrop-blur-lg opacity-70" />
-            </div>
-          </div>
 
           {/* CTA Button */}
           <button
@@ -109,23 +151,13 @@ const SearchHero = () => {
             <p className="text-slate-800">
               Appelez un expert au WhatsApp{' '}
               <a
-                href="https://wa.me/2250761524533"
+                href="https://wa.me/message/RCG5UHW43X6SG1"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-[#3B5BFF] font-semibold hover:underline"
-                data-testid="whatsapp-1"
+                data-testid="whatsapp-expert"
               >
-                07 61 52 45 33
-              </a>
-              {' / '}
-              <a
-                href="https://wa.me/2250753106346"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-[#3B5BFF] font-semibold hover:underline"
-                data-testid="whatsapp-2"
-              >
-                07 53 10 63 46
+                07 61 52 45 33 / 07 53 10 63 46
               </a>
             </p>
           </div>

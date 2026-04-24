@@ -31,7 +31,9 @@ import AdminProductsPage from "./pages/AdminProductsPage";
 import AdminOrdersPage from "./pages/AdminOrdersPage";
 import AdminChatPage from "./pages/AdminChatPage";
 import AdminAuctionsPage from "./pages/AdminAuctionsPage";
+import AdminOffersPage from "./pages/AdminOffersPage";
 import PayPalInstructionsPage from "./pages/PayPalInstructionsPage";
+import BankTransferPage from "./pages/BankTransferPage";
 import TrackingPage from "./pages/TrackingPage";
 import ChatWidget from "./components/chat/ChatWidget";
 import { AboutPage, ContactPage, CGVPage, ReturnsPage } from "./pages/StaticPages";
@@ -192,6 +194,16 @@ function AppRoutes() {
           </ProtectedRoute>
         }
       />
+      <Route
+        path="/bank-transfer/:orderId"
+        element={
+          <ProtectedRoute>
+            <MainLayout>
+              <BankTransferPage />
+            </MainLayout>
+          </ProtectedRoute>
+        }
+      />
 
       {/* Account Routes */}
       <Route
@@ -273,6 +285,14 @@ function AppRoutes() {
         element={
           <ProtectedRoute requireAdmin>
             <AdminAuctionsPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/offers"
+        element={
+          <ProtectedRoute requireAdmin>
+            <AdminOffersPage />
           </ProtectedRoute>
         }
       />

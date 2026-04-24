@@ -125,7 +125,7 @@ const CheckoutPage = () => {
 
       const order = orderResponse.data;
 
-      if (paymentMethod === 'stripe' || paymentMethod === 'installments_3x' || paymentMethod === 'installments_4x') {
+      if (paymentMethod === 'stripe') {
         const checkoutResponse = await axios.post(
           `${API_URL}/api/payments/create-checkout`,
           {
@@ -135,15 +135,27 @@ const CheckoutPage = () => {
           { withCredentials: true }
         );
         window.location.href = checkoutResponse.data.url;
+      } else if (paymentMethod === 'installments_3x' || paymentMethod === 'installments_4x') {
+        // Redirect to PayPal with installment info
+        const installments = paymentMethod === 'installments_3x' ? 3 : 4;
+        const perPayment = (order.total / installments).toFixed(2);
+        toast.success(`Commande créée ! Vous paierez ${installments}x ${perPayment}€ via PayPal`);
+        const url = encodeURIComponent(order.paypal_url || `https://www.paypal.me/billions44/${perPayment}EUR`);
+        navigate(`/paypal/${order.id}?paypal_url=${url}&installments=${installments}&per_payment=${perPayment}`);
       } else if (paymentMethod === 'paypal') {
         // Redirect to PayPal instructions page with paypal_url
         toast.success('Commande créée !');
         const url = encodeURIComponent(order.paypal_url || '');
         navigate(`/paypal/${order.id}?paypal_url=${url}`);
       } else if (paymentMethod === 'bank_transfer') {
-        toast.success('Commande créée. Instructions de virement envoyées par email.');
+        // Fetch bank info to display
+        try {
+          const bankResp = await axios.get(`${API_URL}/api/bank-info`);
+          const bankInfo = bankResp.data;
+          toast.success('Commande créée. Voir les instructions de virement dans votre espace.');
+        } catch (e) { /* ignore */ }
         await fetchCart();
-        navigate(`/account/orders`);
+        navigate(`/bank-transfer/${order.id}`);
       }
     } catch (error) {
       console.error('Checkout error:', error);

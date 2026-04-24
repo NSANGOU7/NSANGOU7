@@ -104,6 +104,14 @@ const AdminPage = () => {
               <Users size={18} />
               Chat en direct
             </Link>
+            <Link
+              to="/admin/offers"
+              className={`flex items-center gap-3 px-4 py-3 transition-colors ${isActive('/admin/offers') ? 'bg-slate-100 font-medium' : 'hover:bg-slate-50'}`}
+              data-testid="admin-nav-offers"
+            >
+              <TrendingUp size={18} />
+              Offres clients
+            </Link>
           </nav>
         </aside>
 

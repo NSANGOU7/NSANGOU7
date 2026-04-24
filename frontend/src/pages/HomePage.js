@@ -5,6 +5,7 @@ import axios from 'axios';
 import ProductCard from '../components/products/ProductCard';
 import AuctionCard from '../components/auctions/AuctionCard';
 import SearchHero from '../components/home/SearchHero';
+import ReviewsSection from '../components/home/ReviewsSection';
 import { useAuth } from '../contexts/AuthContext';
 import { useCart } from '../contexts/CartContext';
 import { toast } from 'sonner';
@@ -70,45 +71,6 @@ const HomePage = () => {
     <div data-testid="home-page">
       {/* New Mobile-First Search Hero */}
       <SearchHero />
-
-      {/* Hero Banner */}
-      <section className="relative w-full h-[60vh] min-h-[400px] flex items-center bg-black" data-testid="hero-banner">
-        <img
-          src="https://images.unsplash.com/photo-1711386689622-1cda23e10217?w=1920&q=80"
-          alt="Hero"
-          className="absolute inset-0 w-full h-full object-cover opacity-60"
-        />
-        <div className="hero-gradient absolute inset-0" />
-        <div className="relative z-20 text-white max-w-2xl px-6 md:px-12 lg:px-24">
-          <span className="inline-block bg-[#FF3333] text-white text-xs font-bold px-3 py-1 uppercase tracking-wider mb-4">
-            Livraison gratuite dès 99€
-          </span>
-          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight mb-4">
-            Pièces Auto<br />
-            <span className="text-[#FF3333]">Qualité Pro</span>
-          </h1>
-          <p className="text-lg text-slate-300 mb-8 max-w-lg">
-            Trouvez la pièce qu'il vous faut parmi des milliers de références. Neuves, occasion ou reconditionnées.
-          </p>
-          <div className="flex flex-wrap gap-4">
-            <Link
-              to="/products"
-              className="bg-white text-[#0A0F1C] px-8 py-3 font-semibold hover:bg-slate-100 transition-colors"
-              data-testid="cta-shop"
-            >
-              Voir le catalogue
-            </Link>
-            <Link
-              to="/auctions"
-              className="bg-[#FF3333] text-white px-8 py-3 font-semibold hover:bg-[#E60000] transition-colors flex items-center gap-2"
-              data-testid="cta-auctions"
-            >
-              <Flame size={20} />
-              Enchères en cours
-            </Link>
-          </div>
-        </div>
-      </section>
 
       {/* Trust Badges */}
       <section className="bg-[#0A0F1C] text-white py-6">
@@ -277,6 +239,9 @@ const HomePage = () => {
           )}
         </div>
       </section>
+
+      {/* Reviews Section */}
+      <ReviewsSection />
 
       {/* Newsletter */}
       <section className="py-12 md:py-16 bg-slate-50" data-testid="newsletter-section">

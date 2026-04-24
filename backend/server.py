@@ -320,6 +320,15 @@ class QuestionCreate(BaseModel):
 class AnswerCreate(BaseModel):
     answer: str
 
+class OfferCreate(BaseModel):
+    product_id: str
+    amount: float
+    message: Optional[str] = None
+
+class OfferResponse(BaseModel):
+    status: str  # accepted or rejected
+    admin_message: Optional[str] = None
+
 # ========== AUTH ROUTES ==========
 @api_router.post("/auth/register")
 async def register(user_data: UserCreate, response: Response):
@@ -1397,6 +1406,123 @@ async def send_chat_message(chat_id: str, message: ChatMessage):
 async def get_all_chats():
     chats = await db.chats.find({}, {"_id": 0}).sort("updated_at", -1).to_list(100)
     return chats
+
+# ========== OFFERS (Faire une offre) ==========
+@api_router.post("/offers")
+async def create_offer(offer_data: OfferCreate, user: dict = Depends(get_current_user)):
+    product = await db.products.find_one({"id": offer_data.product_id}, {"_id": 0})
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+    if offer_data.amount <= 0:
+        raise HTTPException(status_code=400, detail="Invalid amount")
+    
+    offer_doc = {
+        "id": str(uuid.uuid4()),
+        "product_id": offer_data.product_id,
+        "product_title": product.get("title"),
+        "product_price": product.get("price"),
+        "user_id": user["_id"],
+        "user_name": user["name"],
+        "user_email": user["email"],
+        "amount": offer_data.amount,
+        "message": offer_data.message or "",
+        "status": "pending",
+        "admin_message": None,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.offers.insert_one(offer_doc)
+    offer_doc.pop("_id", None)
+    
+    # Notify admin
+    logger.info(f"🔔 NEW OFFER: {user['name']} offers {offer_data.amount}€ for {product.get('title')}")
+    try:
+        await send_email(
+            to_email=ADMIN_NOTIFICATION_EMAIL,
+            subject=f"💰 Nouvelle offre {offer_data.amount}€ - {product.get('title', '')[:40]}",
+            html_content=f"""
+            <div style="font-family:Arial;max-width:600px;margin:auto;padding:20px">
+              <h1 style="color:#FF3333">💰 Nouvelle offre reçue</h1>
+              <p><strong>Produit:</strong> {product.get('title')}</p>
+              <p><strong>Prix demandé:</strong> {product.get('price')}€</p>
+              <p><strong>Offre client:</strong> <span style="color:#FF3333;font-size:24px;font-weight:bold">{offer_data.amount}€</span></p>
+              <p><strong>Client:</strong> {user['name']} ({user['email']})</p>
+              <p><strong>Message:</strong> {offer_data.message or 'Aucun'}</p>
+              <p><a href="https://auto-parts-shop-72.preview.emergentagent.com/admin/offers" style="background:#0A0F1C;color:white;padding:12px 24px;text-decoration:none;display:inline-block">Valider ou refuser</a></p>
+            </div>
+            """
+        )
+    except Exception as e:
+        logger.error(f"Offer email failed: {e}")
+    
+    return offer_doc
+
+@api_router.get("/offers/my")
+async def get_my_offers(user: dict = Depends(get_current_user)):
+    offers = await db.offers.find({"user_id": user["_id"]}, {"_id": 0}).sort("created_at", -1).to_list(100)
+    return offers
+
+@api_router.get("/admin/offers", dependencies=[Depends(require_admin)])
+async def get_all_offers():
+    offers = await db.offers.find({}, {"_id": 0}).sort("created_at", -1).to_list(200)
+    return offers
+
+@api_router.post("/admin/offers/{offer_id}/respond", dependencies=[Depends(require_admin)])
+async def respond_to_offer(offer_id: str, response: OfferResponse):
+    if response.status not in ["accepted", "rejected"]:
+        raise HTTPException(status_code=400, detail="Invalid status")
+    
+    offer = await db.offers.find_one({"id": offer_id})
+    if not offer:
+        raise HTTPException(status_code=404, detail="Offer not found")
+    
+    await db.offers.update_one(
+        {"id": offer_id},
+        {"$set": {
+            "status": response.status,
+            "admin_message": response.admin_message,
+            "responded_at": datetime.now(timezone.utc).isoformat()
+        }}
+    )
+    
+    # Notify customer
+    try:
+        subject = "✅ Votre offre a été acceptée !" if response.status == "accepted" else "❌ Votre offre a été refusée"
+        color = "#10B981" if response.status == "accepted" else "#EF4444"
+        status_text = "acceptée" if response.status == "accepted" else "refusée"
+        admin_msg_html = f"<p><strong>Message de l'admin:</strong> {response.admin_message}</p>" if response.admin_message else ""
+        cta_html = f'<p><a href="https://auto-parts-shop-72.preview.emergentagent.com/products/{offer["product_id"]}" style="background:#10B981;color:white;padding:12px 24px;text-decoration:none;display:inline-block">Finaliser mon achat</a></p>' if response.status == "accepted" else ""
+        await send_email(
+            to_email=offer["user_email"],
+            subject=subject,
+            html_content=f"""
+            <div style="font-family:Arial;max-width:600px;margin:auto;padding:20px">
+              <h1 style="color:{color}">{subject}</h1>
+              <p>Bonjour {offer['user_name']},</p>
+              <p>Votre offre de <strong>{offer['amount']}€</strong> pour <strong>{offer['product_title']}</strong> a été <strong>{status_text}</strong>.</p>
+              {admin_msg_html}
+              {cta_html}
+            </div>
+            """
+        )
+    except Exception as e:
+        logger.error(f"Offer response email failed: {e}")
+    
+    return {"message": "Response sent"}
+
+# ========== BANK INFO ==========
+@api_router.get("/bank-info")
+async def get_bank_info():
+    return {
+        "iban": os.environ.get("BANK_IBAN", ""),
+        "bic": os.environ.get("BANK_BIC", ""),
+        "holder": os.environ.get("BANK_HOLDER", "")
+    }
+
+# ========== VIEW COUNTER ==========
+@api_router.post("/products/{product_id}/view")
+async def increment_view(product_id: str):
+    await db.products.update_one({"id": product_id}, {"$inc": {"views": 1}})
+    return {"ok": True}
 
 # ========== USER PROFILE ==========
 @api_router.get("/profile")
