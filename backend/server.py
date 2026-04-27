@@ -269,6 +269,7 @@ class ProductCreate(BaseModel):
     stock: int
     images: List[str] = []
     is_auction: bool = False
+    specifications: Dict[str, str] = {}  # Technical specs (key-value pairs, eBay style)
 
 class ProductUpdate(BaseModel):
     title: Optional[str] = None
@@ -284,6 +285,7 @@ class ProductUpdate(BaseModel):
     images: Optional[List[str]] = None
     is_auction: Optional[bool] = None
     is_featured: Optional[bool] = None
+    specifications: Optional[Dict[str, str]] = None
 
 class AuctionCreate(BaseModel):
     product_id: str

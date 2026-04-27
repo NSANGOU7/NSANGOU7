@@ -7,6 +7,7 @@ import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { toast } from 'sonner';
 import ImageUploader from '../components/admin/ImageUploader';
+import SpecificationsEditor from '../components/admin/SpecificationsEditor';
 import {
   Select,
   SelectContent,
@@ -54,7 +55,8 @@ const emptyProduct = {
   price: '',
   stock: '',
   images: [],
-  is_auction: false
+  is_auction: false,
+  specifications: {}
 };
 
 const AdminProductsPage = () => {
@@ -113,7 +115,8 @@ const AdminProductsPage = () => {
       price: product.price?.toString() || '',
       stock: product.stock?.toString() || '',
       images: product.images || [],
-      is_auction: product.is_auction || false
+      is_auction: product.is_auction || false,
+      specifications: product.specifications || {}
     });
     setShowModal(true);
   };
@@ -160,7 +163,8 @@ const AdminProductsPage = () => {
       price: parseFloat(formData.price),
       stock: parseInt(formData.stock),
       images: formData.images || [],
-      is_auction: formData.is_auction
+      is_auction: formData.is_auction,
+      specifications: formData.specifications || {}
     };
 
     try {
@@ -565,6 +569,18 @@ const AdminProductsPage = () => {
               <ImageUploader
                 images={formData.images}
                 onChange={(newImages) => setFormData(prev => ({ ...prev, images: newImages }))}
+              />
+            </div>
+
+            {/* Specifications (eBay-style characteristics) */}
+            <div>
+              <label className="block text-sm font-medium mb-2">
+                Caractéristiques techniques
+                <span className="text-slate-500 font-normal ml-2">(Cylindrée, Fabricant, Type de carburant…)</span>
+              </label>
+              <SpecificationsEditor
+                specifications={formData.specifications}
+                onChange={(newSpecs) => setFormData(prev => ({ ...prev, specifications: newSpecs }))}
               />
             </div>
 

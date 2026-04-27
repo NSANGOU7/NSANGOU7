@@ -412,6 +412,18 @@ const ProductDetailPage = () => {
                 <span className="text-right">{product.compatible_brands.join(', ')}</span>
               </div>
             )}
+            {product.specifications && Object.keys(product.specifications).length > 0 && (
+              Object.entries(product.specifications).map(([key, value]) => (
+                <div
+                  key={key}
+                  className="flex items-start justify-between py-2 border-b border-slate-800"
+                  data-testid={`spec-row-${key}`}
+                >
+                  <span className="text-slate-400">{key}</span>
+                  <span className="text-right">{value}</span>
+                </div>
+              ))
+            )}
           </div>
         </div>
 
