@@ -99,22 +99,22 @@ const AdminOrdersPage = () => {
 
   const handleExportCSV = async () => {
     try {
-      const response = await axios.get(`${API_URL}/api/admin/export-orders`, { withCredentials: true });
-      
-      // Create download
-      const blob = new Blob([response.data.csv], { type: 'text/csv;charset=utf-8;' });
+      const response = await axios.get(
+        `${API_URL}/api/admin/export-orders`,
+        { withCredentials: true, responseType: 'blob' }
+      );
+      const blob = new Blob([response.data], { type: 'text/csv;charset=utf-8;' });
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `commandes_${new Date().toISOString().split('T')[0]}.csv`;
+      link.download = `commandes_autoparts_${new Date().toISOString().split('T')[0]}.csv`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
-      
       toast.success('Export CSV téléchargé');
     } catch (error) {
-      toast.error('Erreur lors de l\'export');
+      toast.error("Erreur lors de l'export");
     }
   };
 

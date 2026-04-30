@@ -7,6 +7,7 @@ import { Input } from '../components/ui/input';
 import { toast } from 'sonner';
 import axios from 'axios';
 import { ChevronLeft, CreditCard, Check, Truck, Shield, MapPin, Store, Tag } from 'lucide-react';
+import { PaymentMethodIcons } from '../components/common/TrustBadges';
 import {
   Select,
   SelectContent,
@@ -605,6 +606,9 @@ const CheckoutPage = () => {
                 <div className="flex items-center gap-2">
                   <Truck size={16} />
                   <span>Numéro de suivi par email</span>
+                </div>
+                <div className="pt-3">
+                  <PaymentMethodIcons />
                 </div>
               </div>
             </div>

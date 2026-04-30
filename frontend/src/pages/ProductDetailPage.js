@@ -7,6 +7,7 @@ import { useCart } from '../contexts/CartContext';
 import { toast } from 'sonner';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
+import Breadcrumbs from '../components/common/Breadcrumbs';
 import {
   Dialog,
   DialogContent,
@@ -61,6 +62,14 @@ const ProductDetailPage = () => {
     };
     fetchData();
   }, [id, navigate]);
+
+  // Dynamic page title for SEO
+  useEffect(() => {
+    if (product?.title) {
+      document.title = `${product.title} - AUTOPARTS`;
+    }
+    return () => { document.title = 'AUTOPARTS - Pièces Auto Qualité Pro'; };
+  }, [product]);
 
   const handleAddToCart = async () => {
     if (!isAuthenticated) {
@@ -202,6 +211,15 @@ const ProductDetailPage = () => {
       </div>
 
       <div className="max-w-5xl mx-auto px-4 md:px-6 py-4">
+        {/* Breadcrumbs */}
+        <Breadcrumbs
+          items={[
+            { label: 'Catalogue', href: '/products' },
+            ...(product.category ? [{ label: product.category, href: `/products?category=${product.category}` }] : []),
+            { label: product.title }
+          ]}
+        />
+
         {/* Compatibility Alert */}
         <button
           onClick={() => setShowCompatModal(true)}
@@ -217,10 +235,23 @@ const ProductDetailPage = () => {
         </button>
 
         {/* "DANS X PANIERS" badge */}
-        <div className="mb-4">
+        <div className="mb-4 flex items-center gap-2 flex-wrap">
           <span className="inline-block bg-[#FF3333] text-white text-xs font-bold px-3 py-1.5 rounded-full uppercase">
             {(product.views || 1) > 0 ? `Consulté par ${product.views || 1} personnes` : 'Nouveau'}
           </span>
+          {product.stock > 0 && product.stock <= 3 && (
+            <span
+              className="inline-block bg-amber-500 text-black text-xs font-bold px-3 py-1.5 rounded-full uppercase animate-pulse"
+              data-testid="low-stock-badge"
+            >
+              ⚡ Plus que {product.stock} en stock !
+            </span>
+          )}
+          {product.stock === 0 && (
+            <span className="inline-block bg-slate-700 text-white text-xs font-bold px-3 py-1.5 rounded-full uppercase" data-testid="out-of-stock-badge">
+              Rupture de stock
+            </span>
+          )}
         </div>
 
         {/* Image Gallery */}

@@ -1303,33 +1303,100 @@ async def get_admin_stats():
 
 @api_router.get("/admin/export-orders", dependencies=[Depends(require_admin)])
 async def export_orders():
-    orders = await db.orders.find({}, {"_id": 0}).to_list(1000)
-    
-    # Convert to CSV format
-    if not orders:
-        return {"csv": "No orders found"}
-    
+    from fastapi.responses import StreamingResponse
     import csv
     import io
-    
+
+    orders = await db.orders.find({}, {"_id": 0}).sort("created_at", -1).to_list(10000)
+
     output = io.StringIO()
-    writer = csv.writer(output)
-    
-    # Header
-    writer.writerow(["Order ID", "Date", "Customer", "Email", "Total", "Status", "Payment Method"])
-    
+    output.write('\ufeff')  # UTF-8 BOM for Excel
+    writer = csv.writer(output, delimiter=';')
+
+    # Header (French for user)
+    writer.writerow([
+        "Numéro commande", "Date", "Client", "Email", "Téléphone",
+        "Total (€)", "Statut", "Mode paiement", "Mode livraison",
+        "Numéro de suivi", "Adresse", "Ville", "Code postal", "Pays"
+    ])
+
     for order in orders:
+        addr = order.get("shipping_address") or {}
         writer.writerow([
-            order["id"],
-            order["created_at"],
-            order["user_name"],
-            order["user_email"],
-            order["total"],
-            order["status"],
-            order["payment_method"]
+            order.get("id", ""),
+            order.get("created_at", ""),
+            order.get("user_name", ""),
+            order.get("user_email", ""),
+            addr.get("phone", ""),
+            order.get("total", 0),
+            order.get("status", ""),
+            order.get("payment_method", ""),
+            order.get("shipping_method", ""),
+            order.get("tracking_number", ""),
+            addr.get("street", ""),
+            addr.get("city", ""),
+            addr.get("postal_code", ""),
+            addr.get("country", ""),
         ])
-    
-    return {"csv": output.getvalue()}
+
+    output.seek(0)
+    return StreamingResponse(
+        iter([output.getvalue()]),
+        media_type="text/csv; charset=utf-8",
+        headers={
+            "Content-Disposition": f'attachment; filename="commandes_autoparts_{datetime.now().strftime("%Y%m%d")}.csv"'
+        }
+    )
+
+@api_router.get("/admin/sales-chart", dependencies=[Depends(require_admin)])
+async def admin_sales_chart():
+    """Return last 30 days revenue + order counts per day."""
+    from collections import defaultdict
+    cutoff = datetime.now(timezone.utc) - timedelta(days=30)
+    cursor = db.orders.find(
+        {
+            "created_at": {"$gte": cutoff.isoformat()},
+            "status": {"$in": ["confirmed", "shipped", "delivered", "pending_payment"]}
+        },
+        {"_id": 0, "created_at": 1, "total": 1, "status": 1}
+    )
+    daily_rev = defaultdict(float)
+    daily_count = defaultdict(int)
+    async for o in cursor:
+        try:
+            day = o["created_at"][:10]  # YYYY-MM-DD
+        except Exception:
+            continue
+        daily_count[day] += 1
+        if o.get("status") in ("confirmed", "shipped", "delivered"):
+            daily_rev[day] += float(o.get("total") or 0)
+    # Build complete 30-day series (zero-fill missing days)
+    series = []
+    today = datetime.now(timezone.utc).date()
+    for i in range(29, -1, -1):
+        d = (today - timedelta(days=i)).isoformat()
+        series.append({
+            "date": d,
+            "revenue": round(daily_rev.get(d, 0), 2),
+            "orders": daily_count.get(d, 0)
+        })
+    return {"series": series}
+
+# ========== NEWSLETTER ==========
+class NewsletterSubscribe(BaseModel):
+    email: EmailStr
+
+@api_router.post("/newsletter/subscribe")
+async def newsletter_subscribe(data: NewsletterSubscribe):
+    existing = await db.newsletter.find_one({"email": data.email})
+    if existing:
+        return {"message": "Vous êtes déjà inscrit", "already": True}
+    await db.newsletter.insert_one({
+        "email": data.email,
+        "subscribed_at": datetime.now(timezone.utc).isoformat()
+    })
+    logger.info(f"📧 Newsletter subscription: {data.email}")
+    return {"message": "Inscription confirmée", "already": False}
 
 # ========== TRACKING (PUBLIC) ==========
 @api_router.get("/tracking/{tracking_number}")

@@ -5,6 +5,15 @@ import { useAuth } from '../contexts/AuthContext';
 import axios from 'axios';
 import { Button } from '../components/ui/button';
 import { toast } from 'sonner';
+import {
+  ResponsiveContainer,
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  Tooltip,
+  CartesianGrid,
+} from 'recharts';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
@@ -13,6 +22,7 @@ const AdminPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [stats, setStats] = useState(null);
+  const [salesChart, setSalesChart] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -21,10 +31,14 @@ const AdminPage = () => {
       return;
     }
 
-    const fetchStats = async () => {
+    const fetchData = async () => {
       try {
-        const response = await axios.get(`${API_URL}/api/admin/stats`, { withCredentials: true });
-        setStats(response.data);
+        const [statsRes, chartRes] = await Promise.all([
+          axios.get(`${API_URL}/api/admin/stats`, { withCredentials: true }),
+          axios.get(`${API_URL}/api/admin/sales-chart`, { withCredentials: true }),
+        ]);
+        setStats(statsRes.data);
+        setSalesChart(chartRes.data?.series || []);
       } catch (error) {
         console.error('Error fetching admin stats:', error);
         toast.error('Erreur lors du chargement des statistiques');
@@ -33,7 +47,7 @@ const AdminPage = () => {
       }
     };
 
-    fetchStats();
+    fetchData();
   }, [isAuthenticated, isAdmin, navigate]);
 
   const isActive = (path) => location.pathname === path;
@@ -194,6 +208,53 @@ const AdminPage = () => {
                     <p className="font-bold text-emerald-800">{stats?.total_users || 0}</p>
                     <p className="text-sm text-emerald-700">Utilisateurs inscrits</p>
                   </div>
+                </div>
+              </div>
+
+              {/* Sales Chart 30 days */}
+              <div className="bg-white border border-slate-200 p-6 mb-8" data-testid="sales-chart">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-lg font-semibold flex items-center gap-2">
+                    <TrendingUp size={18} /> Ventes des 30 derniers jours
+                  </h2>
+                  <span className="text-xs text-slate-500">
+                    Total : {salesChart.reduce((s, p) => s + (p.revenue || 0), 0).toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' })}
+                  </span>
+                </div>
+                <div style={{ width: '100%', height: 240 }}>
+                  <ResponsiveContainer>
+                    <AreaChart data={salesChart} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                      <defs>
+                        <linearGradient id="revGrad" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="#FF3333" stopOpacity={0.4} />
+                          <stop offset="100%" stopColor="#FF3333" stopOpacity={0} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
+                      <XAxis
+                        dataKey="date"
+                        tick={{ fontSize: 10, fill: '#64748b' }}
+                        tickFormatter={(d) => d?.slice(5)}
+                        interval={Math.ceil(salesChart.length / 8)}
+                      />
+                      <YAxis tick={{ fontSize: 10, fill: '#64748b' }} />
+                      <Tooltip
+                        formatter={(v, name) =>
+                          name === 'revenue'
+                            ? [`${Number(v).toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' })}`, 'CA']
+                            : [v, 'Commandes']
+                        }
+                        labelFormatter={(d) => `Date : ${d}`}
+                      />
+                      <Area
+                        type="monotone"
+                        dataKey="revenue"
+                        stroke="#FF3333"
+                        strokeWidth={2}
+                        fill="url(#revGrad)"
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
                 </div>
               </div>
 

@@ -4,6 +4,7 @@ import { Trash2, Plus, Minus, ShoppingBag, ArrowRight } from 'lucide-react';
 import { useCart } from '../contexts/CartContext';
 import { useAuth } from '../contexts/AuthContext';
 import { Button } from '../components/ui/button';
+import FreeShippingBar from '../components/common/FreeShippingBar';
 import { toast } from 'sonner';
 
 const CartPage = () => {
@@ -92,6 +93,7 @@ const CartPage = () => {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* Cart Items */}
             <div className="lg:col-span-2 space-y-4" data-testid="cart-items">
+              <FreeShippingBar subtotal={cart.total} />
               {cart.items.map((item) => (
                 <div 
                   key={item.product_id} 

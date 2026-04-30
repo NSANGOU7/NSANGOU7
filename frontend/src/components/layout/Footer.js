@@ -1,6 +1,13 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Mail, Phone, MapPin, Facebook, Instagram, MessageCircle } from 'lucide-react';
+import { Mail, Phone, MapPin, Facebook, Instagram, MessageCircle, Send, Check } from 'lucide-react';
+import axios from 'axios';
+import { toast } from 'sonner';
+import { Input } from '../ui/input';
+import { Button } from '../ui/button';
+import { TrustBadges, PaymentMethodIcons } from '../common/TrustBadges';
+
+const API_URL = process.env.REACT_APP_BACKEND_URL;
 
 // TikTok SVG icon
 const TikTokIcon = ({ size = 20 }) => (
@@ -17,8 +24,35 @@ const SnapchatIcon = ({ size = 20 }) => (
 );
 
 const Footer = () => {
+  const [email, setEmail] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [subscribed, setSubscribed] = useState(false);
+
+  const handleNewsletter = async (e) => {
+    e.preventDefault();
+    if (!email) return;
+    setSubmitting(true);
+    try {
+      const res = await axios.post(`${API_URL}/api/newsletter/subscribe`, { email });
+      setSubscribed(true);
+      toast.success(res.data.message || 'Inscription confirmée');
+      setEmail('');
+    } catch (err) {
+      toast.error(err.response?.data?.detail || "Erreur lors de l'inscription");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   return (
     <footer className="bg-[#0A0F1C] text-white" data-testid="footer">
+      {/* Trust Badges Strip */}
+      <div className="border-b border-slate-800 bg-slate-900/50">
+        <div className="px-6 md:px-12 lg:px-24">
+          <TrustBadges />
+        </div>
+      </div>
+
       <div className="px-6 md:px-12 lg:px-24 py-12 md:py-16">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 md:gap-12">
           {/* Brand */}
@@ -130,6 +164,48 @@ const Footer = () => {
               </li>
             </ul>
           </div>
+        </div>
+
+        {/* Newsletter Block */}
+        <div className="mt-12 pt-8 border-t border-slate-800">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+            <div>
+              <h3 className="font-bold text-xl mb-2">Restez informé des bonnes affaires 📬</h3>
+              <p className="text-sm text-slate-400">
+                Recevez en avant-première nos nouveaux arrivages, ventes flash et codes promo exclusifs.
+              </p>
+            </div>
+            <form onSubmit={handleNewsletter} className="flex gap-2" data-testid="newsletter-form">
+              <Input
+                type="email"
+                placeholder="votre@email.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                disabled={subscribed || submitting}
+                className="bg-slate-900 border-slate-700 text-white placeholder:text-slate-500"
+                data-testid="newsletter-email"
+              />
+              <Button
+                type="submit"
+                disabled={submitting || subscribed}
+                className="bg-[#FF3333] hover:bg-[#E60000] text-white whitespace-nowrap"
+                data-testid="newsletter-submit"
+              >
+                {subscribed ? (
+                  <><Check size={16} className="mr-2" /> Inscrit</>
+                ) : (
+                  <><Send size={16} className="mr-2" /> S'inscrire</>
+                )}
+              </Button>
+            </form>
+          </div>
+        </div>
+
+        {/* Payment methods */}
+        <div className="mt-8 pt-6 border-t border-slate-800">
+          <p className="text-xs text-slate-500 mb-3 font-medium uppercase tracking-wide">Moyens de paiement acceptés</p>
+          <PaymentMethodIcons />
         </div>
 
         {/* Bottom Bar */}

@@ -37,6 +37,9 @@ import BankTransferPage from "./pages/BankTransferPage";
 import TrackingPage from "./pages/TrackingPage";
 import ChatWidget from "./components/chat/ChatWidget";
 import { AboutPage, ContactPage, CGVPage, ReturnsPage } from "./pages/StaticPages";
+import NotFoundPage from "./pages/NotFoundPage";
+import WhatsAppButton from "./components/common/WhatsAppButton";
+import PromoBanner from "./components/common/PromoBanner";
 
 // Protected Route Component
 const ProtectedRoute = ({ children, requireAdmin = false }) => {
@@ -68,6 +71,7 @@ const MainLayout = ({ children }) => {
 
   return (
     <div className="flex flex-col min-h-screen">
+      <PromoBanner />
       <Header
         searchQuery={searchQuery}
         setSearchQuery={setSearchQuery}
@@ -77,6 +81,7 @@ const MainLayout = ({ children }) => {
       <Footer />
       {/* Show chat widget for customers, not admins */}
       {!isAdmin && <ChatWidget />}
+      {!isAdmin && <WhatsAppButton />}
     </div>
   );
 };
@@ -365,8 +370,15 @@ function AppRoutes() {
         }
       />
 
-      {/* 404 Redirect */}
-      <Route path="*" element={<Navigate to="/" replace />} />
+      {/* 404 Page */}
+      <Route
+        path="*"
+        element={
+          <MainLayout>
+            <NotFoundPage />
+          </MainLayout>
+        }
+      />
     </Routes>
   );
 }

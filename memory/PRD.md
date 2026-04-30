@@ -37,9 +37,15 @@ Language: French (all UI, emails, messages in French)
 - Resend email integration
 
 ### Latest additions (Feb 2026)
-- **[Feb 2026]** Added `specifications` field (Dict[str, str]) to Product model — allows admin to add custom key-value technical characteristics (Cylindrée, Fabricant, Marque, Nombre de cylindres, Type de carburant, etc.) like eBay
-- **[Feb 2026]** Created `SpecificationsEditor` component in admin with 18 auto-parts quick-add suggestions + custom rows
-- **[Feb 2026]** Product detail page displays specifications as a clean table in "À propos de cet objet" section
+- **[Feb 2026]** Added `specifications` field to Product model — admin can add custom key-value technical characteristics like eBay
+- **[Feb 2026]** Created `SpecificationsEditor` component with 18 auto-parts quick-add suggestions
+- **[Feb 2026]** Product detail page displays specifications as table in "À propos de cet objet"
+- **[Feb 2026]** PRO PACK: full e-commerce optimization
+  - **Trust**: TrustBadges strip (Paiement Sécurisé / Livraison 48h / Retours Gratuits / Support 7j7), PaymentMethodIcons (Visa/MC/PayPal/Stripe/Virement), low-stock urgency badge ("Plus que X !"), out-of-stock badge
+  - **SEO**: SEO meta tags (title, description, keywords, robots), Open Graph + Twitter Card, custom favicon (SVG), robots.txt + sitemap.xml, dynamic page title per product
+  - **UX**: WhatsApp floating button, top promo banner (livraison gratuite), Breadcrumbs on product page, custom 404 page, free shipping progress bar in cart
+  - **Marketing**: Newsletter signup in footer (POST /api/newsletter/subscribe stored in `newsletter` collection)
+  - **Admin**: Sales chart 30 days (recharts AreaChart), proper CSV export with French headers + UTF-8 BOM for Excel, StreamingResponse with content-disposition
 
 ---
 

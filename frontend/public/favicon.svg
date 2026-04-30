@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <rect width="64" height="64" rx="10" fill="#0A0F1C"/>
+  <path d="M16 36 L24 22 L40 22 L48 36 M14 40 L50 40 M20 44 a4 4 0 1 0 0.01 0 M44 44 a4 4 0 1 0 0.01 0" fill="none" stroke="#FF3333" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="32" y="58" font-family="Arial,sans-serif" font-size="9" font-weight="900" text-anchor="middle" fill="#FFFFFF">AUTO</text>
+</svg>
