@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { ChevronRight, Flame, Star, Truck, Shield, Clock } from 'lucide-react';
 import axios from 'axios';
 import ProductCard from '../components/products/ProductCard';
+import ProductShowcase from '../components/products/ProductShowcase';
 import AuctionCard from '../components/auctions/AuctionCard';
 import SearchHero from '../components/home/SearchHero';
 import ReviewsSection from '../components/home/ReviewsSection';
@@ -174,40 +175,14 @@ const HomePage = () => {
         </section>
       )}
 
-      {/* Featured Products */}
-      <section className="py-12 md:py-16" data-testid="featured-section">
-        <div className="px-6 md:px-12 lg:px-24">
-          <div className="flex items-center justify-between mb-8">
-            <h2 className="text-2xl sm:text-3xl font-semibold section-title">Pièces en vedette</h2>
-            <Link
-              to="/products?is_featured=true"
-              className="flex items-center gap-1 text-sm font-medium text-[#0A0F1C] hover:text-[#FF3333] transition-colors"
-              data-testid="view-all-featured"
-            >
-              Voir tout
-              <ChevronRight size={18} />
-            </Link>
-          </div>
-          {loading ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {[...Array(4)].map((_, i) => (
-                <div key={i} className="bg-slate-100 aspect-square animate-pulse" />
-              ))}
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {featuredProducts.map((product) => (
-                <ProductCard
-                  key={product.id}
-                  product={product}
-                  onAddToCart={handleAddToCart}
-                  onAddToWishlist={handleAddToWishlist}
-                />
-              ))}
-            </div>
-          )}
-        </div>
-      </section>
+      {/* Featured Products - eBay style dark showcase */}
+      <ProductShowcase
+        title="Pièces moteur — Sélection du jour"
+        subtitle="Nos recommandations pour vous"
+        products={featuredProducts}
+        viewAllHref="/products?is_featured=true"
+        testId="showcase-featured"
+      />
 
       {/* Categories Grid */}
       <section className="py-12 md:py-16 bg-[#0A0F1C]" data-testid="categories-section">
@@ -244,40 +219,14 @@ const HomePage = () => {
         </div>
       </section>
 
-      {/* New Arrivals */}
-      <section className="py-12 md:py-16" data-testid="new-arrivals-section">
-        <div className="px-6 md:px-12 lg:px-24">
-          <div className="flex items-center justify-between mb-8">
-            <h2 className="text-2xl sm:text-3xl font-semibold section-title">Nouveautés</h2>
-            <Link
-              to="/products?sort=newest"
-              className="flex items-center gap-1 text-sm font-medium text-[#0A0F1C] hover:text-[#FF3333] transition-colors"
-              data-testid="view-all-new"
-            >
-              Voir tout
-              <ChevronRight size={18} />
-            </Link>
-          </div>
-          {loading ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {[...Array(4)].map((_, i) => (
-                <div key={i} className="bg-slate-100 aspect-square animate-pulse" />
-              ))}
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {newArrivals.map((product) => (
-                <ProductCard
-                  key={product.id}
-                  product={product}
-                  onAddToCart={handleAddToCart}
-                  onAddToWishlist={handleAddToWishlist}
-                />
-              ))}
-            </div>
-          )}
-        </div>
-      </section>
+      {/* New Arrivals - eBay style dark showcase */}
+      <ProductShowcase
+        title="Tubes, conduits et tuyaux — Nouveautés"
+        subtitle="Récemment ajoutés au catalogue"
+        products={newArrivals}
+        viewAllHref="/products?sort=newest"
+        testId="showcase-new"
+      />
 
       {/* Reviews Section */}
       <ReviewsSection />

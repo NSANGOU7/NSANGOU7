@@ -41,11 +41,21 @@ Language: French (all UI, emails, messages in French)
 - **[Feb 2026]** Created `SpecificationsEditor` component with 18 auto-parts quick-add suggestions
 - **[Feb 2026]** Product detail page displays specifications as table in "À propos de cet objet"
 - **[Feb 2026]** PRO PACK: full e-commerce optimization
-  - **Trust**: TrustBadges strip (Paiement Sécurisé / Livraison 48h / Retours Gratuits / Support 7j7), PaymentMethodIcons (Visa/MC/PayPal/Stripe/Virement), low-stock urgency badge ("Plus que X !"), out-of-stock badge
-  - **SEO**: SEO meta tags (title, description, keywords, robots), Open Graph + Twitter Card, custom favicon (SVG), robots.txt + sitemap.xml, dynamic page title per product
-  - **UX**: WhatsApp floating button, top promo banner (livraison gratuite), Breadcrumbs on product page, custom 404 page, free shipping progress bar in cart
-  - **Marketing**: Newsletter signup in footer (POST /api/newsletter/subscribe stored in `newsletter` collection)
-  - **Admin**: Sales chart 30 days (recharts AreaChart), proper CSV export with French headers + UTF-8 BOM for Excel, StreamingResponse with content-disposition
+  - **Trust**: TrustBadges strip, PaymentMethodIcons (Visa/MC/PayPal/Stripe/Virement), low-stock urgency, out-of-stock badge
+  - **SEO**: SEO meta tags, Open Graph + Twitter Card, custom favicon (SVG), robots.txt + sitemap.xml, dynamic page title per product
+  - **UX**: WhatsApp floating button, top promo banner, Breadcrumbs, custom 404 page, free shipping progress bar in cart
+  - **Marketing**: Newsletter signup
+  - **Admin**: Sales chart 30 days, proper CSV export
+- **[Feb 2026]** LANGUAGE SWITCHER: 4 langues (FR/EN/ES/AR) via `LanguageContext` + `i18n/translations.js`. RTL support pour arabe (`document.documentElement.dir`)
+- **[Feb 2026]** Email + WhatsApp finalisés : `contact@automobilepart.fr` + `+33 7 61 52 45 33`
+- **[Feb 2026]** REFONTE PRODUITS : Nouvelle dispo eBay-style sombre (`ProductCardDark` + `ProductShowcase`) avec :
+  - Images carrées arrondies (rounded-2xl)
+  - Badge condition top-left, cœur top-right
+  - Titre 2 lignes + bouton menu vertical
+  - Prix gros blanc en bas
+  - Sections "Pièces moteur — Sélection du jour" et "Tubes, conduits — Nouveautés" sur home
+  - Section "Recommandations pour vous" sur page produit (basé sur catégorie)
+  - Tout responsive : 2 colonnes mobile, 4 desktop
 
 ---
 

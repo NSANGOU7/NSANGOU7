@@ -1,9 +1,8 @@
 import React from 'react';
 
-// WhatsApp number — change this to user's real number (no +, no spaces, country code first)
-// Example for France: 33612345678
-const WHATSAPP_NUMBER = '33612345678';
-const WHATSAPP_MESSAGE = 'Bonjour, je suis intéressé par une pièce sur AutoParts';
+// WhatsApp number — France: 33761524533
+const WHATSAPP_NUMBER = '33761524533';
+const WHATSAPP_MESSAGE = 'Bonjour, je suis intéressé par une pièce sur AutomobilePart';
 
 const WhatsAppButton = () => {
   const href = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(WHATSAPP_MESSAGE)}`;

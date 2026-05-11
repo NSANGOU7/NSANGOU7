@@ -6,6 +6,7 @@ import { Toaster } from "sonner";
 // Contexts
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { CartProvider } from "./contexts/CartContext";
+import { LanguageProvider } from "./contexts/LanguageContext";
 
 // Layout Components
 import Header from "./components/layout/Header";
@@ -386,21 +387,23 @@ function AppRoutes() {
 function App() {
   return (
     <BrowserRouter>
-      <AuthProvider>
-        <CartProvider>
-          <Toaster 
-            position="top-right" 
-            richColors 
-            closeButton
-            toastOptions={{
-              style: {
-                fontFamily: 'Manrope, sans-serif'
-              }
-            }}
-          />
-          <AppRoutes />
-        </CartProvider>
-      </AuthProvider>
+      <LanguageProvider>
+        <AuthProvider>
+          <CartProvider>
+            <Toaster 
+              position="top-right" 
+              richColors 
+              closeButton
+              toastOptions={{
+                style: {
+                  fontFamily: 'Manrope, sans-serif'
+                }
+              }}
+            />
+            <AppRoutes />
+          </CartProvider>
+        </AuthProvider>
+      </LanguageProvider>
     </BrowserRouter>
   );
 }

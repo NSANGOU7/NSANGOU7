@@ -151,7 +151,7 @@ const SearchHero = () => {
             <p className="text-slate-800">
               Appelez un expert au WhatsApp{' '}
               <a
-                href="https://wa.me/message/RCG5UHW43X6SG1"
+                href="https://wa.me/33761524533"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-[#3B5BFF] font-semibold hover:underline"

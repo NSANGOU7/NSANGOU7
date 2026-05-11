@@ -145,7 +145,7 @@ const ContactPage = () => {
                     <Mail size={20} className="text-[#FF3333] mt-0.5" />
                     <div>
                       <p className="font-medium">Email</p>
-                      <p className="text-slate-600">contact@autoparts.fr</p>
+                      <p className="text-slate-600">contact@automobilepart.fr</p>
                     </div>
                   </div>
                   <div className="flex items-start gap-3">

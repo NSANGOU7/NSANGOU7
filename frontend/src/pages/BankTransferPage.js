@@ -152,7 +152,7 @@ const BankTransferPage = () => {
             <p className="font-semibold text-blue-900">Une question ?</p>
             <p className="text-sm text-blue-800 mt-1">
               Contactez-nous via le chat ou WhatsApp :{' '}
-              <a href="https://wa.me/message/RCG5UHW43X6SG1" className="font-semibold underline">Cliquez ici</a>
+              <a href="https://wa.me/33761524533" className="font-semibold underline">Cliquez ici</a>
             </p>
           </div>
         </div>

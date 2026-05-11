@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import Breadcrumbs from '../components/common/Breadcrumbs';
+import ProductShowcase from '../components/products/ProductShowcase';
 import {
   Dialog,
   DialogContent,
@@ -486,6 +487,15 @@ const ProductDetailPage = () => {
           )}
         </div>
       </div>
+
+      {/* Recommendations section (eBay style) */}
+      <ProductShowcase
+        title={`${product.category ? `Plus de ${product.category}` : 'Pièces similaires'} pour vous`}
+        subtitle="Nos recommandations pour vous"
+        fetchUrl={`/api/products?category=${product.category || ''}&limit=8`}
+        viewAllHref={`/products${product.category ? `?category=${product.category}` : ''}`}
+        testId="showcase-recommendations"
+      />
 
       {/* Make Offer Modal */}
       <Dialog open={showOfferModal} onOpenChange={setShowOfferModal}>

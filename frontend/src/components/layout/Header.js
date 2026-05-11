@@ -3,6 +3,8 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Search, ShoppingCart, User, Menu, X, ChevronDown, LogOut, Package, Heart, Settings } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useCart } from '../../contexts/CartContext';
+import { useLanguage } from '../../contexts/LanguageContext';
+import LanguageSwitcher from '../common/LanguageSwitcher';
 import { Button } from '../ui/button';
 import {
   DropdownMenu,
@@ -15,6 +17,7 @@ import {
 const Header = ({ onSearch, searchQuery, setSearchQuery }) => {
   const { user, isAuthenticated, isAdmin, logout } = useAuth();
   const { itemCount } = useCart();
+  const { t } = useLanguage();
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
 
@@ -47,7 +50,7 @@ const Header = ({ onSearch, searchQuery, setSearchQuery }) => {
             <div className="flex w-full bg-slate-50 border border-slate-200 focus-within:border-slate-900 transition-colors">
               <input
                 type="text"
-                placeholder="Rechercher pièces, marques, références OEM..."
+                placeholder={t('searchPlaceholder')}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="flex-1 px-4 py-2.5 bg-transparent outline-none text-sm"
@@ -64,7 +67,10 @@ const Header = ({ onSearch, searchQuery, setSearchQuery }) => {
           </form>
 
           {/* Right Actions */}
-          <div className="flex items-center gap-2 md:gap-4">
+          <div className="flex items-center gap-2 md:gap-3">
+            {/* Language Switcher */}
+            <LanguageSwitcher />
+
             {/* Cart */}
             <Link
               to="/cart"
@@ -92,29 +98,29 @@ const Header = ({ onSearch, searchQuery, setSearchQuery }) => {
                 <DropdownMenuContent align="end" className="w-56">
                   <DropdownMenuItem onClick={() => navigate('/account')} data-testid="account-link">
                     <User size={16} className="mr-2" />
-                    Mon Compte
+                    {t('myAccount')}
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => navigate('/account/orders')} data-testid="orders-link">
                     <Package size={16} className="mr-2" />
-                    Mes Commandes
+                    {t('myOrders')}
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => navigate('/account/wishlist')} data-testid="wishlist-link">
                     <Heart size={16} className="mr-2" />
-                    Ma Wishlist
+                    {t('myWishlist')}
                   </DropdownMenuItem>
                   {isAdmin && (
                     <>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem onClick={() => navigate('/admin')} data-testid="admin-link">
                         <Settings size={16} className="mr-2" />
-                        Administration
+                        {t('admin')}
                       </DropdownMenuItem>
                     </>
                   )}
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={handleLogout} data-testid="logout-button">
                     <LogOut size={16} className="mr-2" />
-                    Déconnexion
+                    {t('logout')}
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -122,7 +128,7 @@ const Header = ({ onSearch, searchQuery, setSearchQuery }) => {
               <Link to="/login">
                 <Button variant="outline" className="hidden md:flex items-center gap-2" data-testid="login-button">
                   <User size={18} />
-                  Connexion
+                  {t('login')}
                 </Button>
                 <Button variant="ghost" size="icon" className="md:hidden" data-testid="login-button-mobile">
                   <User size={24} />
@@ -146,7 +152,7 @@ const Header = ({ onSearch, searchQuery, setSearchQuery }) => {
           <div className="flex w-full bg-slate-50 border border-slate-200 focus-within:border-slate-900">
             <input
               type="text"
-              placeholder="Rechercher..."
+              placeholder={t('searchMobile')}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="flex-1 px-4 py-2.5 bg-transparent outline-none text-sm"
@@ -162,13 +168,14 @@ const Header = ({ onSearch, searchQuery, setSearchQuery }) => {
       {/* Mobile Menu */}
       {mobileMenuOpen && (
         <div className="md:hidden border-t border-slate-200 bg-white" data-testid="mobile-menu">
-          <nav className="px-6 py-4 space-y-2">
-            <Link to="/products?category=engine" className="block py-2 text-sm font-medium">Moteur</Link>
-            <Link to="/products?category=brakes" className="block py-2 text-sm font-medium">Freinage</Link>
-            <Link to="/products?category=suspension" className="block py-2 text-sm font-medium">Suspension</Link>
-            <Link to="/products?category=electrical" className="block py-2 text-sm font-medium">Électricité</Link>
-            <Link to="/products?category=bodywork" className="block py-2 text-sm font-medium">Carrosserie</Link>
-            <Link to="/auctions" className="block py-2 text-sm font-medium text-[#FF3333]">Enchères</Link>
+          <nav className="px-6 py-4 space-y-2" onClick={() => setMobileMenuOpen(false)}>
+            <Link to="/products?category=engine" className="block py-2 text-sm font-medium">{t('cat_engine')}</Link>
+            <Link to="/products?category=brakes" className="block py-2 text-sm font-medium">{t('cat_brakes')}</Link>
+            <Link to="/products?category=suspension" className="block py-2 text-sm font-medium">{t('cat_suspension')}</Link>
+            <Link to="/products?category=electrical" className="block py-2 text-sm font-medium">{t('cat_electrical')}</Link>
+            <Link to="/products?category=bodywork" className="block py-2 text-sm font-medium">{t('cat_bodywork')}</Link>
+            <Link to="/auctions" className="block py-2 text-sm font-medium text-[#FF3333]">{t('cat_auctions')}</Link>
+            <Link to="/suivi" className="block py-2 text-sm font-medium">{t('trackOrder')}</Link>
           </nav>
         </div>
       )}

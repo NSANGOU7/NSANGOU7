@@ -195,7 +195,7 @@ const PayPalInstructionsPage = () => {
             <p className="font-semibold text-blue-900">Une question ?</p>
             <p className="text-sm text-blue-800 mt-1">
               Contactez-nous via le chat en bas à droite de la page ou par WhatsApp :{' '}
-              <a href="https://wa.me/2250761524533" className="font-semibold underline">07 61 52 45 33</a>
+              <a href="https://wa.me/33761524533" className="font-semibold underline">07 61 52 45 33</a>
             </p>
           </div>
         </div>

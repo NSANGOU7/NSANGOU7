@@ -105,7 +105,7 @@ const Footer = () => {
                 <SnapchatIcon size={16} />
               </a>
               <a
-                href="https://wa.me/message/RCG5UHW43X6SG1"
+                href="https://wa.me/33761524533"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="w-10 h-10 bg-slate-800 hover:bg-[#25D366] rounded-full flex items-center justify-center transition-colors"
@@ -151,15 +151,15 @@ const Footer = () => {
                 <span>306 rue de la petite compagne<br />60730 Sainte Geneviève<br />France</span>
               </li>
               <li>
-                <a href="https://wa.me/message/RCG5UHW43X6SG1" target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 text-slate-400 hover:text-white transition-colors">
+                <a href="https://wa.me/33761524533" target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 text-slate-400 hover:text-white transition-colors">
                   <MessageCircle size={18} className="flex-shrink-0" />
-                  <span>WhatsApp</span>
+                  <span>WhatsApp +33 7 61 52 45 33</span>
                 </a>
               </li>
               <li>
-                <a href="mailto:contact@autoparts.com" className="flex items-center gap-3 text-slate-400 hover:text-white transition-colors">
+                <a href="mailto:contact@automobilepart.fr" className="flex items-center gap-3 text-slate-400 hover:text-white transition-colors">
                   <Mail size={18} className="flex-shrink-0" />
-                  <span>contact@autoparts.com</span>
+                  <span>contact@automobilepart.fr</span>
                 </a>
               </li>
             </ul>
