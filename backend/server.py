@@ -1142,7 +1142,7 @@ async def answer_question(question_id: str, answer_data: AnswerCreate):
 # ========== FILE UPLOAD ==========
 @api_router.post("/upload/image", dependencies=[Depends(require_admin)])
 async def upload_image(file: UploadFile = File(...)):
-    """Upload an image file (admin only). Returns public URL."""
+    """Upload an image file (admin only). Saves locally and returns public URL."""
     # Validate content type
     if not file.content_type or not file.content_type.startswith("image/"):
         raise HTTPException(status_code=400, detail="File must be an image")
@@ -1161,50 +1161,80 @@ async def upload_image(file: UploadFile = File(...)):
     if len(data) > 5 * 1024 * 1024:
         raise HTTPException(status_code=400, detail="File too large (max 5MB)")
     
-    # Upload to Object Storage
+    # Save locally (works on both Emergent and VPS)
     file_id = str(uuid.uuid4())
-    path = f"{APP_NAME}/products/{file_id}.{ext}"
+    upload_dir = os.environ.get("UPLOAD_DIR", "/app/uploads")
+    os.makedirs(upload_dir, exist_ok=True)
+    local_path = f"{upload_dir}/{file_id}.{ext}"
     
     try:
-        result = put_object(path, data, file.content_type)
+        with open(local_path, "wb") as f:
+            f.write(data)
     except Exception as e:
         logger.error(f"Upload failed: {e}")
         raise HTTPException(status_code=500, detail="Upload failed")
     
+    # Also try Object Storage (Emergent) — non-blocking fallback
+    object_path = None
+    try:
+        result = put_object(f"{APP_NAME}/products/{file_id}.{ext}", data, file.content_type)
+        object_path = result.get("path")
+    except Exception:
+        pass  # local is enough
+    
     # Store reference in DB
     await db.files.insert_one({
         "id": file_id,
-        "storage_path": result["path"],
+        "storage_path": object_path,
+        "local_path": local_path,
+        "extension": ext,
         "original_filename": file.filename,
         "content_type": file.content_type,
-        "size": result.get("size", len(data)),
+        "size": len(data),
         "is_deleted": False,
         "created_at": datetime.now(timezone.utc).isoformat()
     })
     
-    # Return the URL that frontend can use
-    backend_url = os.environ.get("BACKEND_URL", "https://auto-parts-shop-72.preview.emergentagent.com")
-    file_url = f"{backend_url}/api/files/{file_id}"
-    
-    return {"url": file_url, "id": file_id, "path": result["path"]}
+    # Return relative URL — works whether site is on Emergent preview or VPS
+    file_url = f"/api/files/{file_id}"
+    return {"url": file_url, "id": file_id}
 
 @api_router.get("/files/{file_id}")
 async def download_file(file_id: str):
-    """Public endpoint to serve uploaded images."""
+    """Public endpoint to serve uploaded images. Tries local first, then Object Storage."""
     record = await db.files.find_one({"id": file_id, "is_deleted": False}, {"_id": 0})
     if not record:
         raise HTTPException(status_code=404, detail="File not found")
     
-    try:
-        data, content_type = get_object(record["storage_path"])
-        return Response(
-            content=data, 
-            media_type=record.get("content_type", content_type),
-            headers={"Cache-Control": "public, max-age=86400"}
-        )
-    except Exception as e:
-        logger.error(f"File download failed: {e}")
-        raise HTTPException(status_code=500, detail="Failed to retrieve file")
+    content_type = record.get("content_type", "image/jpeg")
+    
+    # Try local first (VPS storage)
+    local_path = record.get("local_path")
+    if local_path and os.path.exists(local_path):
+        try:
+            with open(local_path, "rb") as f:
+                data = f.read()
+            return Response(
+                content=data,
+                media_type=content_type,
+                headers={"Cache-Control": "public, max-age=86400"}
+            )
+        except Exception as e:
+            logger.error(f"Local read failed: {e}")
+    
+    # Fallback to Object Storage (Emergent)
+    if record.get("storage_path"):
+        try:
+            data, ct = get_object(record["storage_path"])
+            return Response(
+                content=data,
+                media_type=content_type or ct,
+                headers={"Cache-Control": "public, max-age=86400"}
+            )
+        except Exception as e:
+            logger.error(f"Object Storage read failed: {e}")
+    
+    raise HTTPException(status_code=404, detail="File not retrievable")
 
 # ========== ADMIN AUCTIONS MANAGEMENT ==========
 @api_router.get("/admin/auctions", dependencies=[Depends(require_admin)])

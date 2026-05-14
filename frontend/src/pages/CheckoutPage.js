@@ -136,11 +136,11 @@ const CheckoutPage = () => {
           { withCredentials: true }
         );
         window.location.href = checkoutResponse.data.url;
-      } else if (paymentMethod === 'installments_3x' || paymentMethod === 'installments_4x') {
+      } else if (paymentMethod === 'installments_2x') {
         // Redirect to PayPal with installment info
-        const installments = paymentMethod === 'installments_3x' ? 3 : 4;
+        const installments = 2;
         const perPayment = (order.total / installments).toFixed(2);
-        toast.success(`Commande créée ! Vous paierez ${installments}x ${perPayment}€ via PayPal`);
+        toast.success(`Commande créée ! Vous paierez ${installments}× ${perPayment}€ via PayPal`);
         const url = encodeURIComponent(order.paypal_url || `https://www.paypal.me/billions44/${perPayment}EUR`);
         navigate(`/paypal/${order.id}?paypal_url=${url}&installments=${installments}&per_payment=${perPayment}`);
       } else if (paymentMethod === 'paypal') {
@@ -272,10 +272,10 @@ const CheckoutPage = () => {
                       <div className="mt-3 p-3 bg-white border border-emerald-200">
                         <p className="text-sm text-emerald-700 font-medium flex items-center gap-1">
                           <MapPin size={14} />
-                          123 Rue de l'Automobile, 75001 Paris
+                          306 rue de la petite compagne, 60730 Sainte Geneviève
                         </p>
                         <p className="text-xs text-slate-500 mt-1">
-                          Ouvert Lun-Ven 9h-18h, Sam 10h-16h
+                          France · Ouvert Lun-Ven 9h-18h, Sam 10h-16h
                         </p>
                       </div>
                       <p className="text-sm mt-3 text-emerald-700 font-semibold">
@@ -302,6 +302,21 @@ const CheckoutPage = () => {
                   {shippingMethod === 'delivery' ? <Truck size={24} /> : <Store size={24} />}
                   {shippingMethod === 'delivery' ? 'Adresse de livraison' : 'Coordonnées pour le retrait'}
                 </h2>
+
+                {shippingMethod === 'pickup' && (
+                  <div className="mb-6 p-4 bg-emerald-50 border border-emerald-200 rounded">
+                    <p className="text-sm font-semibold text-emerald-800 mb-2 flex items-center gap-2">
+                      <MapPin size={16} />
+                      Adresse de retrait :
+                    </p>
+                    <p className="text-sm text-emerald-900 font-medium">
+                      306 rue de la petite compagne<br />
+                      60730 Sainte Geneviève<br />
+                      France
+                    </p>
+                    <p className="text-xs text-slate-600 mt-2">Ouvert Lun-Ven 9h-18h, Sam 10h-16h</p>
+                  </div>
+                )}
 
                 <form onSubmit={handleAddressSubmit} className="space-y-4">
                   {shippingMethod === 'delivery' && (
@@ -462,48 +477,26 @@ const CheckoutPage = () => {
                     </div>
                   </label>
 
-                  {/* Installments 3x */}
+                  {/* Installments 2x */}
                   <label 
-                    className={`flex items-center gap-4 p-4 border cursor-pointer transition-colors ${paymentMethod === 'installments_3x' ? 'border-[#0A0F1C] bg-slate-50' : 'border-slate-200'}`}
-                    data-testid="payment-3x"
+                    className={`flex items-center gap-4 p-4 border cursor-pointer transition-colors ${paymentMethod === 'installments_2x' ? 'border-[#0A0F1C] bg-slate-50' : 'border-slate-200'}`}
+                    data-testid="payment-2x"
                   >
                     <input
                       type="radio"
                       name="payment"
-                      value="installments_3x"
-                      checked={paymentMethod === 'installments_3x'}
+                      value="installments_2x"
+                      checked={paymentMethod === 'installments_2x'}
                       onChange={(e) => setPaymentMethod(e.target.value)}
                       className="w-5 h-5"
                     />
                     <div className="flex-1">
-                      <p className="font-medium">Paiement en 3 fois sans frais</p>
+                      <p className="font-medium">Paiement en 2 fois sans frais</p>
                       <p className="text-sm text-slate-500">
-                        3 × {(totalWithShipping / 3).toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' })}
+                        2 × {(totalWithShipping / 2).toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' })}
                       </p>
                     </div>
-                    <span className="px-2 py-1 bg-purple-100 text-purple-700 text-xs font-bold rounded">3×</span>
-                  </label>
-
-                  {/* Installments 4x */}
-                  <label 
-                    className={`flex items-center gap-4 p-4 border cursor-pointer transition-colors ${paymentMethod === 'installments_4x' ? 'border-[#0A0F1C] bg-slate-50' : 'border-slate-200'}`}
-                    data-testid="payment-4x"
-                  >
-                    <input
-                      type="radio"
-                      name="payment"
-                      value="installments_4x"
-                      checked={paymentMethod === 'installments_4x'}
-                      onChange={(e) => setPaymentMethod(e.target.value)}
-                      className="w-5 h-5"
-                    />
-                    <div className="flex-1">
-                      <p className="font-medium">Paiement en 4 fois sans frais</p>
-                      <p className="text-sm text-slate-500">
-                        4 × {(totalWithShipping / 4).toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' })}
-                      </p>
-                    </div>
-                    <span className="px-2 py-1 bg-pink-100 text-pink-700 text-xs font-bold rounded">4×</span>
+                    <span className="px-2 py-1 bg-purple-100 text-purple-700 text-xs font-bold rounded">2×</span>
                   </label>
 
                   {/* Bank Transfer */}
