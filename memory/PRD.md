@@ -39,23 +39,20 @@ Language: French (all UI, emails, messages in French)
 ### Latest additions (Feb 2026)
 - **[Feb 2026]** Added `specifications` field to Product model — admin can add custom key-value technical characteristics like eBay
 - **[Feb 2026]** Created `SpecificationsEditor` component with 18 auto-parts quick-add suggestions
-- **[Feb 2026]** Product detail page displays specifications as table in "À propos de cet objet"
-- **[Feb 2026]** PRO PACK: full e-commerce optimization
-  - **Trust**: TrustBadges strip, PaymentMethodIcons (Visa/MC/PayPal/Stripe/Virement), low-stock urgency, out-of-stock badge
-  - **SEO**: SEO meta tags, Open Graph + Twitter Card, custom favicon (SVG), robots.txt + sitemap.xml, dynamic page title per product
-  - **UX**: WhatsApp floating button, top promo banner, Breadcrumbs, custom 404 page, free shipping progress bar in cart
-  - **Marketing**: Newsletter signup
-  - **Admin**: Sales chart 30 days, proper CSV export
-- **[Feb 2026]** LANGUAGE SWITCHER: 4 langues (FR/EN/ES/AR) via `LanguageContext` + `i18n/translations.js`. RTL support pour arabe (`document.documentElement.dir`)
+- **[Feb 2026]** Product detail page displays specifications as table
+- **[Feb 2026]** PRO PACK: TrustBadges, PaymentMethodIcons, SEO meta tags, OG + Twitter Card, custom favicon, robots.txt, sitemap.xml, WhatsApp floating button, promo banner, Breadcrumbs, 404 page, free shipping bar, newsletter, sales chart 30 days, CSV export
+- **[Feb 2026]** LANGUAGE SWITCHER: 4 langues (FR/EN/ES/AR) avec RTL pour arabe
 - **[Feb 2026]** Email + WhatsApp finalisés : `contact@automobilepart.fr` + `+33 7 61 52 45 33`
-- **[Feb 2026]** REFONTE PRODUITS : Nouvelle dispo eBay-style sombre (`ProductCardDark` + `ProductShowcase`) avec :
-  - Images carrées arrondies (rounded-2xl)
-  - Badge condition top-left, cœur top-right
-  - Titre 2 lignes + bouton menu vertical
-  - Prix gros blanc en bas
-  - Sections "Pièces moteur — Sélection du jour" et "Tubes, conduits — Nouveautés" sur home
-  - Section "Recommandations pour vous" sur page produit (basé sur catégorie)
-  - Tout responsive : 2 colonnes mobile, 4 desktop
+- **[Feb 2026]** REFONTE PRODUITS eBay-style sombre (`ProductCardDark` + `ProductShowcase`)
+
+### Latest (May 2026)
+- **[May 2026]** ✅ **GUEST CHECKOUT** : achat possible sans compte (champs email + nom sur Checkout). CartContext hybride (API si connecté, localStorage sinon). Migration automatique du panier guest → user à la connexion.
+- **[May 2026]** ✅ **PAYPAL BUSINESS API v2** : intégration des Smart Buttons (remplace `paypal.me`). Endpoints `/api/paypal/create-order` et `/api/paypal/capture-order/{id}`. Lib `@paypal/react-paypal-js`. Mode sandbox (clés livrées sont SANDBOX, doivent être remplacées par des clés LIVE pour la prod). Frontend `PayPalSmartButtons` composant.
+- **[May 2026]** ✅ **SÉCURITÉ** : middleware FastAPI ajoutant headers `X-Frame-Options`, `X-Content-Type-Options`, `X-XSS-Protection`, `Referrer-Policy`, `Permissions-Policy`, `HSTS` (si HTTPS). Rate limit IP register (5/h). Brute-force login déjà en place (5 tentatives → 15 min lockout).
+- **[May 2026]** ✅ **UPLOAD IMAGES VPS** : stockage local (`UPLOAD_DIR`) + fallback Object Storage. URLs relatives `/api/files/{id}` qui fonctionnent partout.
+- **[May 2026]** ✅ **PAIEMENTS** : retrait 4× / 3×, conservé 1× et 2×. Adresse pickup affichée : `306 rue de la petite compagne, 60730 Sainte Geneviève`.
+- **[May 2026]** ✅ **MOBILE** : Dialog admin produits `w-[calc(100vw-2rem)]` sur mobile, bouton "Ajouter produit" full-width mobile, filtres en colonne sur mobile.
+- **[May 2026]** ✅ **EMERGENT BADGE** : `display: none !important` (badge "Made with Emergent" caché).
 
 ---
 

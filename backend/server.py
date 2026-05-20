@@ -42,8 +42,12 @@ resend.api_key = os.environ.get("RESEND_API_KEY", "")
 SENDER_EMAIL = os.environ.get("SENDER_EMAIL", "onboarding@resend.dev")
 ADMIN_NOTIFICATION_EMAIL = os.environ.get("ADMIN_NOTIFICATION_EMAIL", "admin@autoparts.com")
 
-# PayPal Config
+# PayPal Config — Business API v2 (Live)
 PAYPAL_ME_USERNAME = os.environ.get("PAYPAL_ME_USERNAME", "")
+PAYPAL_CLIENT_ID = os.environ.get("PAYPAL_CLIENT_ID", "")
+PAYPAL_CLIENT_SECRET = os.environ.get("PAYPAL_CLIENT_SECRET", "")
+PAYPAL_MODE = os.environ.get("PAYPAL_MODE", "live")  # live or sandbox
+PAYPAL_BASE_URL = "https://api-m.paypal.com" if PAYPAL_MODE == "live" else "https://api-m.sandbox.paypal.com"
 
 # Object Storage Config
 STORAGE_URL = "https://integrations.emergentagent.com/objstore/api/v1/storage"
@@ -198,6 +202,18 @@ def create_refresh_token(user_id: str) -> str:
     return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
 
 # ========== AUTH HELPER ==========
+# In-memory rate limit buckets (per process). For multi-worker, use Redis.
+_rate_buckets: Dict[str, List[float]] = {}
+def _rate_limit_check(key: str, max_calls: int, window_seconds: int):
+    """Raise 429 if too many calls within the time window for the given key."""
+    import time as _t
+    now = _t.time()
+    bucket = _rate_buckets.setdefault(key, [])
+    bucket[:] = [t for t in bucket if now - t < window_seconds]
+    if len(bucket) >= max_calls:
+        raise HTTPException(status_code=429, detail="Trop de tentatives, réessayez plus tard")
+    bucket.append(now)
+
 async def get_current_user(request: Request) -> dict:
     token = request.cookies.get("access_token")
     if not token:
@@ -302,9 +318,13 @@ class CartItemAdd(BaseModel):
 
 class OrderCreate(BaseModel):
     shipping_address: AddressModel
-    payment_method: str  # stripe, paypal, bank_transfer, installments_3x, installments_4x
+    payment_method: str  # stripe, paypal, bank_transfer, installments_2x
     shipping_method: str = "delivery"  # delivery or pickup
     save_card: bool = False
+    # Guest checkout fields (used if user not authenticated)
+    guest_email: Optional[EmailStr] = None
+    guest_name: Optional[str] = None
+    guest_items: Optional[List[Dict[str, Any]]] = None  # [{product_id, quantity}]
 
 class ChatStart(BaseModel):
     name: str
@@ -333,11 +353,15 @@ class OfferResponse(BaseModel):
 
 # ========== AUTH ROUTES ==========
 @api_router.post("/auth/register")
-async def register(user_data: UserCreate, response: Response):
-    email = user_data.email.lower()
+async def register(user_data: UserCreate, response: Response, request: Request):
+    # Rate limit: max 5 registrations per IP per hour (anti-spam)
+    ip = request.client.host if request.client else "unknown"
+    _rate_limit_check(f"register:{ip}", max_calls=5, window_seconds=3600)
+    
+    email = user_data.email.lower().strip()
     existing = await db.users.find_one({"email": email})
     if existing:
-        raise HTTPException(status_code=400, detail="Email already registered")
+        raise HTTPException(status_code=400, detail="Cet email est déjà inscrit. Connectez-vous.")
     
     user_doc = {
         "email": email,
@@ -835,20 +859,46 @@ async def get_order(order_id: str, user: dict = Depends(get_current_user)):
     return order
 
 @api_router.post("/orders")
-async def create_order(order_data: OrderCreate, user: dict = Depends(get_current_user)):
-    cart = await db.carts.find_one({"user_id": user["_id"]})
-    if not cart or not cart.get("items"):
-        raise HTTPException(status_code=400, detail="Cart is empty")
+async def create_order(order_data: OrderCreate, request: Request):
+    # Try to get user (optional — guest checkout allowed)
+    user = None
+    try:
+        user = await get_current_user(request)
+    except HTTPException:
+        user = None
+    
+    is_guest = user is None
+    
+    # Build items list
+    cart_items = []
+    if is_guest:
+        # Guest must provide email + items
+        if not order_data.guest_email:
+            raise HTTPException(status_code=400, detail="Email requis pour la commande invité")
+        if not order_data.guest_items:
+            raise HTTPException(status_code=400, detail="Panier vide")
+        cart_items = order_data.guest_items
+        user_id = None
+        user_email = order_data.guest_email.lower()
+        user_name = order_data.guest_name or order_data.shipping_address.full_name or "Invité"
+    else:
+        cart = await db.carts.find_one({"user_id": user["_id"]})
+        if not cart or not cart.get("items"):
+            raise HTTPException(status_code=400, detail="Cart is empty")
+        cart_items = cart["items"]
+        user_id = user["_id"]
+        user_email = user["email"]
+        user_name = user["name"]
     
     # Calculate total and validate stock
     items = []
     total = 0
-    for cart_item in cart["items"]:
+    for cart_item in cart_items:
         product = await db.products.find_one({"id": cart_item["product_id"]})
         if not product:
-            raise HTTPException(status_code=400, detail=f"Product not found")
+            raise HTTPException(status_code=400, detail=f"Produit introuvable")
         if product.get("stock", 0) < cart_item["quantity"]:
-            raise HTTPException(status_code=400, detail=f"Insufficient stock for {product['title']}")
+            raise HTTPException(status_code=400, detail=f"Stock insuffisant pour {product['title']}")
         
         subtotal = product["price"] * cart_item["quantity"]
         items.append({
@@ -877,9 +927,10 @@ async def create_order(order_data: OrderCreate, user: dict = Depends(get_current
     
     order_doc = {
         "id": str(uuid.uuid4()),
-        "user_id": user["_id"],
-        "user_email": user["email"],
-        "user_name": user["name"],
+        "user_id": user_id,
+        "user_email": user_email,
+        "user_name": user_name,
+        "is_guest": is_guest,
         "items": items,
         "subtotal": total - shipping_cost + discount,
         "discount": discount,
@@ -897,21 +948,22 @@ async def create_order(order_data: OrderCreate, user: dict = Depends(get_current
     await db.orders.insert_one(order_doc)
     
     # Update stock
-    for cart_item in cart["items"]:
+    for cart_item in cart_items:
         await db.products.update_one(
             {"id": cart_item["product_id"]},
             {"$inc": {"stock": -cart_item["quantity"]}}
         )
     
-    # Clear cart
-    await db.carts.delete_one({"user_id": user["_id"]})
+    # Clear cart (only for logged-in users)
+    if not is_guest and user_id:
+        await db.carts.delete_one({"user_id": user_id})
     
     # Send emails
     order_doc.pop("_id", None)
     try:
         # Confirmation email to customer
         await send_email(
-            to_email=user["email"],
+            to_email=user_email,
             subject=f"Confirmation de commande #{order_doc['id'][:8]} - AutoParts",
             html_content=order_confirmation_email_html(order_doc)
         )
@@ -925,9 +977,9 @@ async def create_order(order_data: OrderCreate, user: dict = Depends(get_current
         logger.error(f"Email sending failed (non-blocking): {e}")
     
     # Notify admin (log)
-    logger.info(f"🔔 ADMIN NOTIFICATION: New order {order_doc['id']} from {user['email']} - Total: {total}€ - Method: {order_data.payment_method}")
+    logger.info(f"🔔 ADMIN NOTIFICATION: New order {order_doc['id']} from {user_email} ({'guest' if is_guest else 'user'}) - Total: {total}€ - Method: {order_data.payment_method}")
     
-    # Generate PayPal.me URL if PayPal selected
+    # Generate PayPal.me URL if PayPal selected (legacy fallback)
     if order_data.payment_method == "paypal" and PAYPAL_ME_USERNAME:
         order_doc["paypal_url"] = f"https://www.paypal.me/{PAYPAL_ME_USERNAME}/{total:.2f}EUR"
     
@@ -951,9 +1003,22 @@ async def create_checkout_session(
     request: Request,
     order_id: str = Body(...),
     origin_url: str = Body(...),
-    user: dict = Depends(get_current_user)
 ):
-    order = await db.orders.find_one({"id": order_id, "user_id": user["_id"]})
+    # Try to identify user, but allow guest checkout
+    user = None
+    try:
+        user = await get_current_user(request)
+    except HTTPException:
+        user = None
+    
+    # Find order — by user_id if logged in, else by order_id only (guest)
+    if user:
+        order = await db.orders.find_one({"id": order_id, "user_id": user["_id"]})
+        if not order:
+            order = await db.orders.find_one({"id": order_id})
+    else:
+        order = await db.orders.find_one({"id": order_id})
+    
     if not order:
         raise HTTPException(status_code=404, detail="Order not found")
     
@@ -976,8 +1041,8 @@ async def create_checkout_session(
         cancel_url=cancel_url,
         metadata={
             "order_id": order_id,
-            "user_id": user["_id"],
-            "user_email": user["email"]
+            "user_id": str(order.get("user_id") or "guest"),
+            "user_email": order.get("user_email", "")
         }
     )
     
@@ -987,7 +1052,7 @@ async def create_checkout_session(
     await db.payment_transactions.insert_one({
         "id": str(uuid.uuid4()),
         "order_id": order_id,
-        "user_id": user["_id"],
+        "user_id": order.get("user_id"),
         "session_id": session.session_id,
         "amount": order["total"],
         "currency": "eur",
@@ -1000,7 +1065,8 @@ async def create_checkout_session(
     return {"url": session.url, "session_id": session.session_id}
 
 @api_router.get("/payments/status/{session_id}")
-async def get_payment_status(session_id: str, user: dict = Depends(get_current_user)):
+async def get_payment_status(session_id: str, request: Request):
+    # Auth optional for guest checkout
     api_key = os.environ.get("STRIPE_API_KEY")
     if not api_key:
         raise HTTPException(status_code=500, detail="Payment not configured")
@@ -1892,21 +1958,18 @@ async def startup_event():
     await seed_admin()
     await seed_sample_products()
     
-    # Write test credentials
-    import os
-    os.makedirs("/app/memory", exist_ok=True)
-    with open("/app/memory/test_credentials.md", "w") as f:
-        f.write("# Test Credentials\n\n")
-        f.write("## Admin Account\n")
-        f.write(f"- Email: {os.environ.get('ADMIN_EMAIL', 'admin@autoparts.com')}\n")
-        f.write(f"- Password: {os.environ.get('ADMIN_PASSWORD', 'admin123')}\n")
-        f.write("- Role: admin\n\n")
-        f.write("## Auth Endpoints\n")
-        f.write("- POST /api/auth/register\n")
-        f.write("- POST /api/auth/login\n")
-        f.write("- POST /api/auth/logout\n")
-        f.write("- GET /api/auth/me\n")
-        f.write("- POST /api/auth/refresh\n")
+    # Write test credentials (best-effort, don't fail if path not writable like on VPS)
+    try:
+        import os as _os
+        memory_dir = _os.environ.get("MEMORY_DIR", "/app/memory")
+        _os.makedirs(memory_dir, exist_ok=True)
+        with open(f"{memory_dir}/test_credentials.md", "w") as f:
+            f.write("# Test Credentials\n\n")
+            f.write("## Admin Account\n")
+            f.write(f"- Email: {_os.environ.get('ADMIN_EMAIL', 'admin@autoparts.com')}\n")
+            f.write(f"- Password: {_os.environ.get('ADMIN_PASSWORD', 'admin123')}\n")
+    except Exception as _e:
+        logger.warning(f"Could not write test_credentials (non-fatal): {_e}")
     
     logger.info("Application started successfully")
 
@@ -1914,7 +1977,98 @@ async def startup_event():
 async def shutdown_db_client():
     client.close()
 
-# Include the router in the main app
+# ========== PAYPAL BUSINESS API (Orders v2) ==========
+async def get_paypal_access_token():
+    """Get OAuth2 access token from PayPal."""
+    if not PAYPAL_CLIENT_ID or not PAYPAL_CLIENT_SECRET:
+        raise HTTPException(status_code=500, detail="PayPal not configured")
+    try:
+        resp = requests.post(
+            f"{PAYPAL_BASE_URL}/v1/oauth2/token",
+            auth=(PAYPAL_CLIENT_ID, PAYPAL_CLIENT_SECRET),
+            headers={"Accept": "application/json", "Accept-Language": "en_US"},
+            data={"grant_type": "client_credentials"},
+            timeout=15
+        )
+        resp.raise_for_status()
+        return resp.json()["access_token"]
+    except Exception as e:
+        logger.error(f"PayPal token error: {e}")
+        raise HTTPException(status_code=502, detail="PayPal authentication failed")
+
+class PayPalCreatePayload(BaseModel):
+    order_id: str  # internal order id
+
+@api_router.post("/paypal/create-order")
+async def paypal_create_order(payload: PayPalCreatePayload):
+    """Create a PayPal order from an existing internal order."""
+    order = await db.orders.find_one({"id": payload.order_id}, {"_id": 0})
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+
+    token = await get_paypal_access_token()
+    amount = float(order.get("total") or 0)
+    body = {
+        "intent": "CAPTURE",
+        "purchase_units": [{
+            "reference_id": order["id"],
+            "description": f"AutoParts commande #{order['id'][:8]}",
+            "amount": {"currency_code": "EUR", "value": f"{amount:.2f}"}
+        }],
+        "application_context": {
+            "brand_name": "AutomobilePart",
+            "user_action": "PAY_NOW",
+            "shipping_preference": "NO_SHIPPING"
+        }
+    }
+    try:
+        resp = requests.post(
+            f"{PAYPAL_BASE_URL}/v2/checkout/orders",
+            headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
+            json=body,
+            timeout=20
+        )
+        resp.raise_for_status()
+        data = resp.json()
+        await db.orders.update_one({"id": payload.order_id}, {"$set": {"paypal_order_id": data["id"]}})
+        return {"paypal_order_id": data["id"]}
+    except requests.HTTPError as e:
+        logger.error(f"PayPal create-order failed: {e.response.text if e.response else e}")
+        raise HTTPException(status_code=502, detail="PayPal order creation failed")
+
+@api_router.post("/paypal/capture-order/{paypal_order_id}")
+async def paypal_capture_order(paypal_order_id: str):
+    """Capture a PayPal order after buyer approves."""
+    token = await get_paypal_access_token()
+    try:
+        resp = requests.post(
+            f"{PAYPAL_BASE_URL}/v2/checkout/orders/{paypal_order_id}/capture",
+            headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
+            timeout=20
+        )
+        resp.raise_for_status()
+        data = resp.json()
+        status = data.get("status")
+        if status == "COMPLETED":
+            # Mark internal order as paid
+            order = await db.orders.find_one({"paypal_order_id": paypal_order_id}, {"_id": 0})
+            if order:
+                await db.orders.update_one(
+                    {"id": order["id"]},
+                    {"$set": {"status": "confirmed", "payment_status": "paid",
+                              "paid_at": datetime.now(timezone.utc).isoformat()}}
+                )
+        return {"status": status, "details": data}
+    except requests.HTTPError as e:
+        logger.error(f"PayPal capture failed: {e.response.text if e.response else e}")
+        raise HTTPException(status_code=502, detail="PayPal capture failed")
+
+
+# ========== SECURITY: Rate limiting (in-memory, simple) ==========
+# Note: _rate_limit_check is defined near the top of the file (before route registration)
+
+
+# ========== Include router & global config ==========
 app.include_router(api_router)
 
 # CORS Configuration
@@ -1925,6 +2079,20 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Security headers middleware (XSS, clickjacking, mime sniffing, etc.)
+@app.middleware("http")
+async def security_headers_middleware(request: Request, call_next):
+    response = await call_next(request)
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "SAMEORIGIN"
+    response.headers["X-XSS-Protection"] = "1; mode=block"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
+    # Strict transport only if HTTPS
+    if request.url.scheme == "https":
+        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+    return response
 
 @api_router.get("/")
 async def root():

@@ -60,14 +60,15 @@ const CheckoutPage = () => {
   const [paymentMethod, setPaymentMethod] = useState('stripe');
   const [saveCard, setSaveCard] = useState(false);
 
+  // Guest checkout fields (if not authenticated)
+  const [guestEmail, setGuestEmail] = useState('');
+  const [guestName, setGuestName] = useState('');
+
   useEffect(() => {
-    if (!isAuthenticated) {
-      navigate('/login?redirect=/checkout');
-    }
     if (cart.items.length === 0) {
       navigate('/cart');
     }
-  }, [isAuthenticated, cart, navigate]);
+  }, [cart, navigate]);
 
   useEffect(() => {
     if (user?.addresses?.length > 0) {
@@ -113,14 +114,40 @@ const CheckoutPage = () => {
     setLoading(true);
 
     try {
+      // Validate guest fields if not authenticated
+      if (!isAuthenticated) {
+        if (!guestEmail || !guestEmail.includes('@')) {
+          toast.error('Email valide requis pour finaliser la commande');
+          setLoading(false);
+          return;
+        }
+        if (!guestName || guestName.trim().length < 2) {
+          toast.error('Nom requis pour la commande');
+          setLoading(false);
+          return;
+        }
+      }
+
+      const orderPayload = {
+        shipping_address: address,
+        payment_method: paymentMethod,
+        shipping_method: shippingMethod,
+        save_card: saveCard,
+      };
+
+      // Add guest fields if not logged in
+      if (!isAuthenticated) {
+        orderPayload.guest_email = guestEmail.trim().toLowerCase();
+        orderPayload.guest_name = guestName.trim();
+        orderPayload.guest_items = cart.items.map((it) => ({
+          product_id: it.product_id,
+          quantity: it.quantity,
+        }));
+      }
+
       const orderResponse = await axios.post(
         `${API_URL}/api/orders`,
-        {
-          shipping_address: address,
-          payment_method: paymentMethod,
-          shipping_method: shippingMethod,
-          save_card: saveCard
-        },
+        orderPayload,
         { withCredentials: true }
       );
 
@@ -319,6 +346,43 @@ const CheckoutPage = () => {
                 )}
 
                 <form onSubmit={handleAddressSubmit} className="space-y-4">
+                    {/* Guest checkout fields (only if not logged in) */}
+                    {!isAuthenticated && (
+                      <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded">
+                        <p className="text-sm font-semibold text-blue-900 mb-3">
+                          🛒 Achat en tant qu'invité
+                          <Link to="/login?redirect=/checkout" className="ml-2 text-xs text-blue-600 underline">
+                            ou connectez-vous
+                          </Link>
+                        </p>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-sm font-medium mb-2">Nom complet *</label>
+                            <Input
+                              value={guestName}
+                              onChange={(e) => setGuestName(e.target.value)}
+                              placeholder="Jean Dupont"
+                              required
+                              data-testid="guest-name"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium mb-2">Email *</label>
+                            <Input
+                              type="email"
+                              value={guestEmail}
+                              onChange={(e) => setGuestEmail(e.target.value)}
+                              placeholder="vous@example.com"
+                              required
+                              data-testid="guest-email"
+                            />
+                          </div>
+                        </div>
+                        <p className="text-xs text-slate-600 mt-2">
+                          Votre confirmation de commande sera envoyée à cet email.
+                        </p>
+                      </div>
+                    )}
                   {shippingMethod === 'delivery' && (
                     <>
                       <div>

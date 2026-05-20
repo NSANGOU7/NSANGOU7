@@ -4,6 +4,7 @@ import { ExternalLink, Copy, Check, AlertCircle, Clock, CreditCard, Mail } from 
 import axios from 'axios';
 import { Button } from '../components/ui/button';
 import { toast } from 'sonner';
+import PayPalSmartButtons from '../components/payment/PayPalSmartButtons';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
@@ -92,26 +93,22 @@ const PayPalInstructionsPage = () => {
             Instructions de paiement
           </h2>
 
-          {/* Step 1 */}
+          {/* Step 1 — PayPal Smart Buttons (works on mobile & desktop) */}
           <div className="mb-6 pl-12 relative">
             <div className="absolute left-0 top-0 w-9 h-9 bg-blue-600 text-white rounded-full flex items-center justify-center font-bold">
               1
             </div>
-            <h3 className="font-semibold mb-2">Cliquez sur le bouton PayPal ci-dessous</h3>
+            <h3 className="font-semibold mb-2">Payer en un clic avec PayPal</h3>
             <p className="text-sm text-slate-600 mb-3">
-              Vous serez redirigé vers PayPal pour effectuer votre paiement en toute sécurité.
+              Cliquez sur le bouton PayPal ou Carte ci-dessous. Vous pouvez payer même sans compte PayPal (par carte).
             </p>
-            <a
-              href={effectivePaypalUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 bg-[#0070BA] hover:bg-[#003087] text-white px-6 py-3 font-semibold transition-colors"
-              data-testid="paypal-pay-btn"
-            >
-              <span className="font-bold italic text-lg">PayPal</span>
-              <ExternalLink size={18} />
-              Payer maintenant
-            </a>
+            <PayPalSmartButtons
+              orderId={orderId}
+              onSuccess={() => {
+                toast.success('Commande validée ! Vous allez être redirigé.');
+                setTimeout(() => navigate(`/checkout/success?order_id=${orderId}`), 1500);
+              }}
+            />
           </div>
 
           {/* Step 2 */}

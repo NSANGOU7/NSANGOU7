@@ -258,10 +258,10 @@ const AdminProductsPage = () => {
 
       <div className="px-6 md:px-12 lg:px-24 py-8">
         {/* Actions Bar */}
-        <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between mb-6">
-          <div className="flex flex-col md:flex-row gap-4 flex-1">
+        <div className="flex flex-col md:flex-row gap-3 items-start md:items-center justify-between mb-6">
+          <div className="flex flex-col sm:flex-row gap-3 flex-1 w-full">
             {/* Search */}
-            <div className="relative flex-1 max-w-md">
+            <div className="relative flex-1 w-full">
               <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
               <Input
                 placeholder="Rechercher un produit..."
@@ -273,7 +273,7 @@ const AdminProductsPage = () => {
             </div>
             {/* Category Filter */}
             <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-              <SelectTrigger className="w-[180px]" data-testid="category-filter">
+              <SelectTrigger className="w-full sm:w-[180px]" data-testid="category-filter">
                 <SelectValue placeholder="Catégorie" />
               </SelectTrigger>
               <SelectContent>
@@ -285,10 +285,10 @@ const AdminProductsPage = () => {
             </Select>
           </div>
           
-          {/* Add Button */}
+          {/* Add Button - full width on mobile, auto on desktop */}
           <Button
             onClick={openAddModal}
-            className="bg-[#FF3333] hover:bg-[#E60000] text-white"
+            className="bg-[#FF3333] hover:bg-[#E60000] text-white w-full md:w-auto"
             data-testid="add-product-btn"
           >
             <Plus size={18} className="mr-2" />
@@ -415,7 +415,7 @@ const AdminProductsPage = () => {
 
       {/* Add/Edit Product Modal */}
       <Dialog open={showModal} onOpenChange={setShowModal}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-2xl max-h-[95vh] sm:max-h-[90vh] w-[calc(100vw-2rem)] sm:w-auto overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
               {editingProduct ? 'Modifier le produit' : 'Ajouter un nouveau produit'}

@@ -30,28 +30,9 @@ const CartPage = () => {
   };
 
   const handleCheckout = () => {
-    if (!isAuthenticated) {
-      toast.error('Connectez-vous pour commander');
-      navigate('/login?redirect=/checkout');
-      return;
-    }
+    // Guest checkout enabled — no auth required
     navigate('/checkout');
   };
-
-  if (!isAuthenticated) {
-    return (
-      <div className="min-h-screen bg-white" data-testid="cart-page">
-        <div className="px-6 md:px-12 lg:px-24 py-16 text-center">
-          <ShoppingBag size={64} className="mx-auto text-slate-300 mb-4" />
-          <h1 className="text-2xl font-bold mb-4">Votre panier</h1>
-          <p className="text-slate-500 mb-8">Connectez-vous pour voir votre panier</p>
-          <Link to="/login">
-            <Button data-testid="login-to-cart">Se connecter</Button>
-          </Link>
-        </div>
-      </div>
-    );
-  }
 
   if (loading) {
     return (
