@@ -133,16 +133,17 @@ const CheckoutPage = () => {
         payment_method: paymentMethod,
         shipping_method: shippingMethod,
         save_card: saveCard,
+        // Always send items from local cart — works for both guest and logged-in users
+        guest_items: cart.items.map((it) => ({
+          product_id: it.product_id,
+          quantity: it.quantity,
+        })),
       };
 
       // Add guest fields if not logged in
       if (!isAuthenticated) {
         orderPayload.guest_email = guestEmail.trim().toLowerCase();
         orderPayload.guest_name = guestName.trim();
-        orderPayload.guest_items = cart.items.map((it) => ({
-          product_id: it.product_id,
-          quantity: it.quantity,
-        }));
       }
 
       const orderResponse = await axios.post(
@@ -168,7 +169,7 @@ const CheckoutPage = () => {
         const installments = 2;
         const perPayment = (order.total / installments).toFixed(2);
         toast.success(`Commande créée ! Vous paierez ${installments}× ${perPayment}€ via PayPal`);
-        const url = encodeURIComponent(order.paypal_url || `https://www.paypal.me/billions44/${perPayment}EUR`);
+        const url = encodeURIComponent(order.paypal_url || `https://www.paypal.me/payement671/${perPayment}EUR`);
         navigate(`/paypal/${order.id}?paypal_url=${url}&installments=${installments}&per_payment=${perPayment}`);
       } else if (paymentMethod === 'paypal') {
         // Redirect to PayPal instructions page with paypal_url

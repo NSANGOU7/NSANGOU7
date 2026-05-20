@@ -869,23 +869,26 @@ async def create_order(order_data: OrderCreate, request: Request):
     
     is_guest = user is None
     
-    # Build items list
+    # Build items list — prefer guest_items if provided (allows logged users to checkout from localStorage cart)
     cart_items = []
+    if order_data.guest_items and len(order_data.guest_items) > 0:
+        cart_items = order_data.guest_items
+    elif not is_guest:
+        cart = await db.carts.find_one({"user_id": user["_id"]})
+        if cart and cart.get("items"):
+            cart_items = cart["items"]
+    
+    if not cart_items:
+        raise HTTPException(status_code=400, detail="Votre panier est vide")
+    
+    # Set user info
     if is_guest:
-        # Guest must provide email + items
         if not order_data.guest_email:
             raise HTTPException(status_code=400, detail="Email requis pour la commande invité")
-        if not order_data.guest_items:
-            raise HTTPException(status_code=400, detail="Panier vide")
-        cart_items = order_data.guest_items
         user_id = None
         user_email = order_data.guest_email.lower()
         user_name = order_data.guest_name or order_data.shipping_address.full_name or "Invité"
     else:
-        cart = await db.carts.find_one({"user_id": user["_id"]})
-        if not cart or not cart.get("items"):
-            raise HTTPException(status_code=400, detail="Cart is empty")
-        cart_items = cart["items"]
         user_id = user["_id"]
         user_email = user["email"]
         user_name = user["name"]

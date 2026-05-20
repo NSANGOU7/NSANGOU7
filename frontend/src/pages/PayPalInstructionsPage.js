@@ -42,7 +42,7 @@ const PayPalInstructionsPage = () => {
     toast.success('Copié dans le presse-papier');
   };
 
-  const effectivePaypalUrl = paypalUrl || (order?.paypal_url) || `https://www.paypal.me/billions44/${order?.total?.toFixed(2) || '0'}EUR`;
+  const effectivePaypalUrl = paypalUrl || (order?.paypal_url) || `https://www.paypal.me/payement671/${order?.total?.toFixed(2) || '0'}EUR`;
 
   if (loading) {
     return (
